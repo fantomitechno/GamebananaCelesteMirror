@@ -1,0 +1,28 @@
+{
+  "name": "CelesteMirror",
+  "version": "1.0.0",
+  "description": "",
+  "main": "build",
+  "scripts": {
+    "build": "tsc",
+    "start": "node ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.20.0",
+      "onFail": "download"
+    }
+  },
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "smol-toml": "^1.8.0"
+  }
+}
