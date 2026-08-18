@@ -17,7 +17,7 @@ export interface GenericMod {
   name: string
   lastModification: number
   submitter: string
-  id: number
+  id: string
 }
 
 export interface KnownMod extends GenericMod {

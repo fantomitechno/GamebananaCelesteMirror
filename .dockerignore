@@ -1,0 +1,8 @@
+node_modules
+build
+
+mods
+images
+rps
+
+shell.nix

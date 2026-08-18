@@ -2,16 +2,24 @@ import AdmZip from "adm-zip";
 import type { Config, KnownMod } from "./types.js";
 import { createXXHash64 } from "hash-wasm";
 import { createWriteStream, existsSync, readFileSync, unlinkSync, writeFileSync } from "fs";
+import { deleteFile } from "./files.js";
 
 export const searchIcons = async (config: Config, knownMods: { [id: number]: KnownMod }) => {
   const iconsList: string[] = [];
   for (const mod of Object.values(knownMods)) {
     for (const file of mod.files) {
-      const zipFile = new AdmZip(config.ModDirectory + "/" + file + ".zip")
-      const fileList = zipFile.getEntries().map(e => e.entryName).filter(e => e.startsWith("Graphics/Atlases/Gui/"));
-      const richPresenceIcons = fileList.filter(e => (e.startsWith("Graphics/Atlases/Gui/areas/") || fileList.includes(e.substring(0, e.length - 4) + "_back.png")) && e.endsWith(".png") && !e.endsWith("_back.png") && !e.endsWith("hover.png"))
-      const icons = await copyRichPressenceIcons(config, richPresenceIcons, zipFile)
-      iconsList.push(...icons)
+      try {
+        const zipFile = new AdmZip(config.ModDirectory + "/" + file + ".zip")
+        const fileList = zipFile.getEntries().map(e => e.entryName).filter(e => e.startsWith("Graphics/Atlases/Gui/"));
+        const richPresenceIcons = fileList.filter(e => (e.startsWith("Graphics/Atlases/Gui/areas/") || fileList.includes(e.substring(0, e.length - 4) + "_back.png")) && e.endsWith(".png") && !e.endsWith("_back.png") && !e.endsWith("hover.png"))
+        const icons = await copyRichPressenceIcons(config, richPresenceIcons, zipFile)
+        iconsList.push(...icons)
+      } catch (error) {
+        console.error(`${config.ModDirectory}/${file}.zip is empty or inexistant`)
+        const knownFile: { [id: number]: string } = {}
+        knownFile[file] = mod.id
+        deleteFile(config, file, knownMods, knownFile, true)
+      }
     }
   }
 
@@ -22,12 +30,14 @@ export const searchIcons = async (config: Config, knownMods: { [id: number]: Kno
     knownIconList = JSON.parse(knownFile.toString());
   }
 
-  const filesToDelete = knownIconList.filter(i => !iconsList.includes(i));
-
-  for (const file of filesToDelete) {
-    deleteFile(config.RichPresenceDirectory + "/" + file + ".png")
+  let deleteFileList: string[] = [];
+  if (existsSync(config.RichPresenceDirectory + "/deletion.json")) {
+    const knownFile = readFileSync(config.RichPresenceDirectory + "/deletion.json")
+    deleteFileList = JSON.parse(knownFile.toString());
   }
+  deleteFileList.push(...knownIconList.filter(i => !iconsList.includes(i)));
   writeFileSync(config.RichPresenceDirectory + "/list.json", JSON.stringify(iconsList))
+  writeFileSync(config.RichPresenceDirectory + "/deletion.json", JSON.stringify(deleteFileList))
 }
 
 
@@ -44,7 +54,7 @@ export const copyRichPressenceIcons = async (config: Config, richPresenceIcons: 
 
     const hash = hasher.digest('hex')
 
-    putFile(data, config.RichPresenceDirectory + "/" + hash + ".png")
+    putIcon(data, config.RichPresenceDirectory + "/" + hash + ".png")
 
     icons.push(hash)
   }
@@ -52,16 +62,10 @@ export const copyRichPressenceIcons = async (config: Config, richPresenceIcons: 
 }
 
 
-const putFile = (data: Buffer, path: string) => {
+const putIcon = (data: Buffer, path: string) => {
   if (existsSync(path)) {
     return;
   }
   const file = createWriteStream(path);
   file.write(data)
-}
-
-const deleteFile = (path: string) => {
-  if (existsSync(path)) {
-    unlinkSync(path);
-  }
 }

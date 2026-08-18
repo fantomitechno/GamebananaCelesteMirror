@@ -1,7 +1,6 @@
 import type { GBMod } from "./types";
 import { sleep } from "./utils.js";
 
-
 let pageSize = 40;
 
 const game = 6460; // Celeste
@@ -25,10 +24,10 @@ const requestPage = async (category: string, page: number) => {
 
     try {
       const obj = JSON.parse(text);
-      const mods: { [id: number]: GBMod } = {};
+      const mods: { [id: string]: GBMod } = {};
       for (const modObj of obj) {
         const mod: GBMod = {
-          id: modObj["_idRow"],
+          id: category.toLowerCase() + "_" + modObj["_idRow"],
           lastModification: modObj["_tsDateModified"],
           name: modObj["_sName"],
           submitter: modObj["_aSubmitter"]["_sName"],
@@ -57,7 +56,7 @@ const requestPage = async (category: string, page: number) => {
 }
 
 const crawlModsCategory = async (category: string) => {
-  let fullmodList: { [id: number]: GBMod } = {};
+  let fullmodList: { [id: string]: GBMod } = {};
   let page = 1;
   let pageContent = await requestPage(category, page);
   while (Object.keys(pageContent).length > 0) {
