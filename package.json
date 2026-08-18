@@ -19,10 +19,14 @@
   },
   "type": "module",
   "devDependencies": {
+    "@types/adm-zip": "^0.5.8",
     "@types/node": "^26.2.0",
     "typescript": "^7.0.2"
   },
   "dependencies": {
+    "adm-zip": "^0.6.0",
+    "hash-wasm": "^4.12.0",
+    "sharp": "^0.35.3",
     "smol-toml": "^1.8.0"
   }
 }
