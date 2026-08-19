@@ -150,7 +150,9 @@ const main = async () => {
   if (filesToCreate.length) {
     console.log(`${filesToCreate.length} files will be downloaded`)
     for (const file of filesToCreate) {
-      knownMods = await createFile(config, file, knownMods, discoveredFiles);
+      let result = await createFile(config, file, knownMods, discoveredFiles, deleteFileList);
+      knownMods = result.knownMods
+      deleteFileList = result.deletedFiles
     }
   }
 
@@ -166,7 +168,9 @@ const main = async () => {
   if (screenshotsToCreate.length) {
     console.log(`${screenshotsToCreate.length} screenshots will be created`)
     for (const screenshot of screenshotsToCreate) {
-      knownMods = await createScs(config, screenshot, knownMods, discoveredScreenshots);
+      let result = await createScs(config, screenshot, knownMods, discoveredScreenshots, deleteScreenshotList);
+      knownMods = result.knownMods
+      deleteScreenshotList = result.deletedFiles
     }
   }
 

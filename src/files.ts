@@ -93,15 +93,18 @@ export const deleteFile = (config: Config, file: number, knownMods: { [id: strin
   return { knownMods, deleteList };
 }
 
-export const createFile = async (config: Config, fileId: number, knownMods: { [id: string]: KnownMod }, discoveredFiles: { [id: number]: GBFile & { modId: string } }) => {
+export const createFile = async (config: Config, fileId: number, knownMods: { [id: string]: KnownMod }, discoveredFiles: { [id: number]: GBFile & { modId: string } }, deletedFiles: string[]) => {
   const file = discoveredFiles[fileId];
 
   const downloaded = await downloadFile(file.url, config.ModDirectory + "/" + fileId + ".zip")
   if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
 
-  knownMods[file.modId].files.push(fileId);
+  if (existsSync(config.ModDirectory + "/" + file + ".zip")) {
+    if (deletedFiles.includes(file + ".zip")) deletedFiles = deletedFiles.filter(d => d !== file + ".zip")
+    knownMods[file.modId].files.push(fileId);
+  }
 
-  return knownMods;
+  return { knownMods, deletedFiles };
 }
 
 export const deleteScs = (config: Config, screenshot: string, knownMods: { [id: string]: KnownMod }, knownScreenshots: { [id: string]: string }) => {
@@ -117,13 +120,16 @@ export const deleteScs = (config: Config, screenshot: string, knownMods: { [id: 
   return { knownMods, deleteList };
 }
 
-export const createScs = async (config: Config, screenshot: string, knownMods: { [id: string]: KnownMod }, discoveredScreenshots: { [id: string]: GBScreenshot & { modId: string } }) => {
+export const createScs = async (config: Config, screenshot: string, knownMods: { [id: string]: KnownMod }, discoveredScreenshots: { [id: string]: GBScreenshot & { modId: string } }, deletedFiles: string[]) => {
   const file = discoveredScreenshots[screenshot];
 
   const downloaded = await downloadImage(file.url, config.ModDirectory + "/" + screenshot + ".png")
   if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
 
-  knownMods[file.modId].screenshots.push(screenshot);
+  if (existsSync(config.ModDirectory + "/" + screenshot + ".png")) {
+    if (deletedFiles.includes(screenshot + ".png")) deletedFiles = deletedFiles.filter(d => d !== screenshot + ".png")
+    knownMods[file.modId].screenshots.push(screenshot);
+  }
 
-  return knownMods;
+  return { knownMods, deletedFiles };
 }
