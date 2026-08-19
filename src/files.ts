@@ -56,31 +56,14 @@ export const createMod = async (config: Config, mod: GBMod, knownMods: { [id: st
   return knownMods;
 }
 
-export const deleteMod = (config: Config, modId: string, knownMods: { [id: string]: KnownMod }) => {
-  const mod = knownMods[modId];
-  const filesDeleteList = [];
-  const screenshotsDeleteList = [];
-
-  for (const file of mod.files) {
-    if (existsSync(config.ModDirectory + "/" + file + ".zip")) filesDeleteList.push(file + ".zip");
-  }
-
-  for (const screenshot of mod.screenshots) {
-    if (existsSync(config.ImagesDirectory + "/" + screenshot + ".png")) screenshotsDeleteList.push(screenshot + ".png");
-  }
-
+export const deleteMod = (modId: string, knownMods: { [id: string]: KnownMod }) => {
   delete knownMods[modId];
-  return { knownMods, filesDeleteList, screenshotsDeleteList }
+  return knownMods
 }
 
 export const deleteFile = (config: Config, file: number, knownMods: { [id: string]: KnownMod }, knownFiles: { [id: number]: string }, force: boolean = false) => {
-  const deleteList = []
-  if (existsSync(config.ModDirectory + "/" + file + ".zip")) {
-    if (force) {
-      unlinkSync(config.ModDirectory + "/" + file + ".zip")
-    } else {
-      deleteList.push(file + ".zip");
-    }
+  if (existsSync(config.ModDirectory + "/" + file + ".zip") && force) {
+    unlinkSync(config.ModDirectory + "/" + file + ".zip")
   }
 
   const modId = knownFiles[file];
@@ -90,26 +73,23 @@ export const deleteFile = (config: Config, file: number, knownMods: { [id: strin
 
   knownMods[modId] = mod;
 
-  return { knownMods, deleteList };
+  return knownMods;
 }
 
-export const createFile = async (config: Config, fileId: number, knownMods: { [id: string]: KnownMod }, discoveredFiles: { [id: number]: GBFile & { modId: string } }, deletedFiles: string[]) => {
+export const createFile = async (config: Config, fileId: number, knownMods: { [id: string]: KnownMod }, discoveredFiles: { [id: number]: GBFile & { modId: string } }) => {
   const file = discoveredFiles[fileId];
 
   const downloaded = await downloadFile(file.url, config.ModDirectory + "/" + fileId + ".zip")
   if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
 
   if (existsSync(config.ModDirectory + "/" + file + ".zip")) {
-    if (deletedFiles.includes(file + ".zip")) deletedFiles = deletedFiles.filter(d => d !== file + ".zip")
     knownMods[file.modId].files.push(fileId);
   }
 
-  return { knownMods, deletedFiles };
+  return knownMods;
 }
 
-export const deleteScs = (config: Config, screenshot: string, knownMods: { [id: string]: KnownMod }, knownScreenshots: { [id: string]: string }) => {
-  const deleteList = []
-  if (existsSync(config.ImagesDirectory + "/" + screenshot + ".png")) deleteList.push(screenshot + ".png");
+export const deleteScs = (screenshot: string, knownMods: { [id: string]: KnownMod }, knownScreenshots: { [id: string]: string }) => {
   const modId = knownScreenshots[screenshot];
   const mod = knownMods[modId];
 
@@ -117,19 +97,18 @@ export const deleteScs = (config: Config, screenshot: string, knownMods: { [id: 
 
   knownMods[modId] = mod;
 
-  return { knownMods, deleteList };
+  return knownMods;
 }
 
-export const createScs = async (config: Config, screenshot: string, knownMods: { [id: string]: KnownMod }, discoveredScreenshots: { [id: string]: GBScreenshot & { modId: string } }, deletedFiles: string[]) => {
+export const createScs = async (config: Config, screenshot: string, knownMods: { [id: string]: KnownMod }, discoveredScreenshots: { [id: string]: GBScreenshot & { modId: string } }) => {
   const file = discoveredScreenshots[screenshot];
 
   const downloaded = await downloadImage(file.url, config.ModDirectory + "/" + screenshot + ".png")
   if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
 
   if (existsSync(config.ModDirectory + "/" + screenshot + ".png")) {
-    if (deletedFiles.includes(screenshot + ".png")) deletedFiles = deletedFiles.filter(d => d !== screenshot + ".png")
     knownMods[file.modId].screenshots.push(screenshot);
   }
 
-  return { knownMods, deletedFiles };
+  return knownMods;
 }

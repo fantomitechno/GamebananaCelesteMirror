@@ -1,4 +1,4 @@
-import { crawlModsCategory, requestPage } from "./crawlGB.js";
+import { crawlModsCategory } from "./crawlGB.js";
 import { parse } from "smol-toml";
 import { mkdirSync, readFileSync, existsSync, writeFileSync } from "node:fs";
 import type { Config, GBFile, GBMod, GBScreenshot, KnownMod } from "./types.js";
@@ -126,23 +126,10 @@ const main = async () => {
     })
   });
 
-  let deleteFileList: string[] = [];
-  if (existsSync(config.ModDirectory + "/deletion.json")) {
-    const knownFile = readFileSync(config.ModDirectory + "/deletion.json")
-    deleteFileList = JSON.parse(knownFile.toString());
-  }
-  let deleteScreenshotList: string[] = [];
-  if (existsSync(config.ImagesDirectory + "/deletion.json")) {
-    const knownFile = readFileSync(config.ImagesDirectory + "/deletion.json")
-    deleteScreenshotList = JSON.parse(knownFile.toString());
-  }
-
   if (filesToDelete.length) {
     console.log(`${filesToDelete.length} files will be deleted`)
     for (const file of filesToDelete) {
-      const result = deleteFile(config, file, knownMods, knownFiles);
-      knownMods = result.knownMods;
-      deleteFileList.push(...result.deleteList);
+      knownMods = deleteFile(config, file, knownMods, knownFiles);
     }
   }
 
@@ -150,42 +137,31 @@ const main = async () => {
   if (filesToCreate.length) {
     console.log(`${filesToCreate.length} files will be downloaded`)
     for (const file of filesToCreate) {
-      let result = await createFile(config, file, knownMods, discoveredFiles, deleteFileList);
-      knownMods = result.knownMods
-      deleteFileList = result.deletedFiles
+      knownMods = await createFile(config, file, knownMods, discoveredFiles);
     }
   }
 
   if (screenshotsToDelete.length) {
     console.log(`${screenshotsToDelete.length} screenshots will be deleted`)
     for (const screenshot of screenshotsToDelete) {
-      let result = deleteScs(config, screenshot, knownMods, knownFiles);
-      knownMods = result.knownMods;
-      deleteScreenshotList.push(...result.deleteList)
+      knownMods = deleteScs(screenshot, knownMods, knownFiles);
     }
   }
 
   if (screenshotsToCreate.length) {
     console.log(`${screenshotsToCreate.length} screenshots will be created`)
     for (const screenshot of screenshotsToCreate) {
-      let result = await createScs(config, screenshot, knownMods, discoveredScreenshots, deleteScreenshotList);
-      knownMods = result.knownMods
-      deleteScreenshotList = result.deletedFiles
+      knownMods = await createScs(config, screenshot, knownMods, discoveredScreenshots);
     }
   }
 
   if (modsToDelete.length) {
     console.log(`${modsToDelete.length} mods will be deleted`)
     for (const mod of modsToDelete) {
-      let result = deleteMod(config, mod, knownMods);
-      knownMods = result.knownMods;
-      deleteFileList.push(...result.filesDeleteList)
-      deleteScreenshotList.push(...result.screenshotsDeleteList)
+      knownMods = deleteMod(mod, knownMods);
     }
   }
   writeFileSync(config.ModDirectory + "/mods.json", JSON.stringify(knownMods))
-  writeFileSync(config.ModDirectory + "/deletion.json", JSON.stringify(deleteFileList))
-  writeFileSync(config.ImagesDirectory + "/deletion.json", JSON.stringify(deleteScreenshotList))
 
   await searchIcons(config, knownMods);
 

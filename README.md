@@ -33,6 +33,8 @@ Every loop runs the main() function:
 
 In the possibility of a gamebanana outage, the gamebanana API would send back an empty array and to not _nuke_ your own mirror by mistake, the deletion are just listed in a `deletion.json` file.
 
+Deletion can be run with `npm run delete` (this will still block if you are deleting more than 50 files at once, this can be bypassed with the environment variable `FORCE` set to **1**)
+
 ## Acknowledgment
 
 For the calls to the Gamebanana API, I looked at how [Maddie480](https://github.com/maddie480/EverestUpdateCheckerServer) runs her own mirror.

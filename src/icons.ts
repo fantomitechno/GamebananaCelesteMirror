@@ -23,21 +23,7 @@ export const searchIcons = async (config: Config, knownMods: { [id: number]: Kno
     }
   }
 
-
-  let knownIconList: string[] = [];
-  if (existsSync(config.RichPresenceDirectory + "/list.json")) {
-    const knownFile = readFileSync(config.RichPresenceDirectory + "/list.json")
-    knownIconList = JSON.parse(knownFile.toString());
-  }
-
-  let deleteFileList: string[] = [];
-  if (existsSync(config.RichPresenceDirectory + "/deletion.json")) {
-    const knownFile = readFileSync(config.RichPresenceDirectory + "/deletion.json")
-    deleteFileList = JSON.parse(knownFile.toString());
-  }
-  deleteFileList.push(...knownIconList.filter(i => !iconsList.includes(i)));
   writeFileSync(config.RichPresenceDirectory + "/list.json", JSON.stringify(iconsList))
-  writeFileSync(config.RichPresenceDirectory + "/deletion.json", JSON.stringify(deleteFileList))
 }
 
 

@@ -5,7 +5,8 @@
   "main": "build",
   "scripts": {
     "build": "tsc",
-    "start": "node ."
+    "start": "node .",
+    "delete": "node build/delete.js"
   },
   "keywords": [],
   "author": "",
