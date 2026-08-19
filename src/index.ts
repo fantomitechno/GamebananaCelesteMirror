@@ -17,6 +17,14 @@ if (args.length > 2) {
   } else {
     timeout = newTimeout;
   }
+} else if (process.env.TIMEOUT) {
+  const newTimeout = Number(process.env.TIMEOUT);
+  if (isNaN(newTimeout)) {
+    repeat = false;
+    console.error(`Could not parse arg "${process.env.TIMEOUT}", blocking repetition`)
+  } else {
+    timeout = newTimeout;
+  }
 }
 
 const ensureFolderExist = (config: Config) => {
@@ -178,9 +186,8 @@ const main = async () => {
   await searchIcons(config, knownMods);
 
   console.log("Finished processing")
+  if (repeat) setTimeout(main, timeout * 60 * 1000)
 }
 
 
 main()
-
-if (repeat) setInterval(main, timeout * 60 * 1000)
