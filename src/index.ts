@@ -9,6 +9,8 @@ const args = process.argv
 let timeout = 30;
 let repeat = true;
 
+export const headers = { "User-Agent": "Celeste Gamebanana Mirror/0.2 (+https://github.com/fantomitechno/GamebananaCelesteMirror)" };
+
 if (args.length > 2) {
   const newTimeout = Number(args[2]);
   if (isNaN(newTimeout)) {

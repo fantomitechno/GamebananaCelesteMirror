@@ -18,6 +18,7 @@ export interface GenericMod {
   lastModification: number
   submitter: string
   id: string
+  nsfw: boolean
 }
 
 export interface KnownMod extends GenericMod {

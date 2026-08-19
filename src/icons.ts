@@ -10,10 +10,12 @@ export const searchIcons = async (config: Config, knownMods: { [id: number]: Kno
     for (const file of mod.files) {
       try {
         const zipFile = new AdmZip(config.ModDirectory + "/" + file + ".zip")
-        const fileList = zipFile.getEntries().map(e => e.entryName).filter(e => e.startsWith("Graphics/Atlases/Gui/"));
-        const richPresenceIcons = fileList.filter(e => (e.startsWith("Graphics/Atlases/Gui/areas/") || fileList.includes(e.substring(0, e.length - 4) + "_back.png")) && e.endsWith(".png") && !e.endsWith("_back.png") && !e.endsWith("hover.png"))
-        const icons = await copyRichPressenceIcons(config, richPresenceIcons, zipFile)
-        iconsList.push(...icons)
+        if (!mod.nsfw) {
+          const fileList = zipFile.getEntries().map(e => e.entryName).filter(e => e.startsWith("Graphics/Atlases/Gui/"));
+          const richPresenceIcons = fileList.filter(e => (e.startsWith("Graphics/Atlases/Gui/areas/") || fileList.includes(e.substring(0, e.length - 4) + "_back.png")) && e.endsWith(".png") && !e.endsWith("_back.png") && !e.endsWith("hover.png"))
+          const icons = await copyRichPressenceIcons(config, richPresenceIcons, zipFile)
+          iconsList.push(...icons)
+        }
       } catch (error) {
         console.error(`${config.ModDirectory}/${file}.zip is empty or inexistant`)
         const knownFile: { [id: number]: string } = {}

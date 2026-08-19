@@ -1,3 +1,4 @@
+import { headers } from ".";
 import type { GBMod } from "./types";
 import { sleep } from "./utils.js";
 
@@ -9,16 +10,19 @@ const url = (category: string, page: number) => `https://gamebanana.com/apiv8/${
 
 const requestPage = async (category: string, page: number) => {
   console.log(`Loading page ${page} for ${category}`);
-  let request = await fetch(url(category, page));
+  let request = await fetch(url(category, page), { headers });
   let tries = 0;
   while (tries < 3) {
     const text = await request.text()
+    if (request.status !== 200) {
+      console.error(`Got a ${request.status} for ${request.url}: ${text}`)
+    }
     pageSize++
     if (pageSize > 50) pageSize = 40;
     if (text.length == 0) {
       await sleep(5000 * tries);
       tries++
-      request = await fetch(url(category, page));
+      request = await fetch(url(category, page), { headers });
       continue;
     }
 
@@ -26,17 +30,32 @@ const requestPage = async (category: string, page: number) => {
       const obj = JSON.parse(text);
       const mods: { [id: string]: GBMod } = {};
       for (const modObj of obj) {
+        let nsfw = false;
+        let screenshots = modObj["_aPreviewMedia"]["_aImages"].slice(0, 2).map((o: any) => {
+          const url = o["_sBaseUrl"] + "/" + o["_sFile"]
+          const id = new URL(url).pathname.split(".").slice(0, -1).join(".").slice(1).replaceAll("/", "_")
+          return { url, id }
+        })
+
+        if (modObj["_bIsNsfw"]) {
+          // mod has content warnings! we need to check which ones.
+          let request = await fetch("https://gamebanana.com/apiv11/" + category + "/" + modObj["_idRow"] + "/ProfilePage", { headers })
+          let obj = await request.json()
+
+          if ("show" !== obj["_sInitialVisibility"]) {
+            screenshots = ["https://images.gamebanana.com/static/img/DefaultEmbeddables/nsfw.jpg"]
+            nsfw = true;
+          }
+        }
+
         const mod: GBMod = {
           id: category.toLowerCase() + "_" + modObj["_idRow"],
           lastModification: modObj["_tsDateModified"],
           name: modObj["_sName"],
           submitter: modObj["_aSubmitter"]["_sName"],
           files: modObj["_aFiles"].filter((o: any) => o["_sFile"].endsWith(".zip")).map((o: any) => { return { url: o["_sDownloadUrl"], id: o["_idRow"] } }),
-          screenshots: modObj["_aPreviewMedia"]["_aImages"].slice(0, 2).map((o: any) => {
-            const url = o["_sBaseUrl"] + "/" + o["_sFile"]
-            const id = new URL(url).pathname.split(".").slice(0, -1).join(".").slice(1).replaceAll("/", "_")
-            return { url, id }
-          })
+          screenshots,
+          nsfw
         }
         mods[mod.id] = mod;
       }
@@ -46,7 +65,7 @@ const requestPage = async (category: string, page: number) => {
       if (error instanceof SyntaxError) {
         await sleep(5000 * tries);
         tries++
-        request = await fetch(url(category, page));
+        request = await fetch(url(category, page), { headers });
         continue;
       }
       throw error;

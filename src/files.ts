@@ -2,14 +2,18 @@ import { existsSync, createWriteStream, unlinkSync } from "node:fs";
 import { Config, GBFile, GBMod, GBScreenshot, KnownMod } from "./types"
 import { sleep } from "./utils.js";
 import sharp from "sharp";
+import { headers } from ".";
 
 const downloadFile = async (url: string, path: string) => {
   if (existsSync(path)) {
     return false;
   }
-  console.log("Downloading " + url)
   const file = createWriteStream(path);
-  const req = await fetch(url);
+  const req = await fetch(url, { headers });
+
+  if (req.status !== 200) {
+    console.error(`Got a ${req.status} for ${url}`)
+  }
   const blob = await req.blob()
   const bytes = await blob.bytes();
   if (bytes.length == 0) {
@@ -24,11 +28,19 @@ const downloadImage = async (url: string, path: string) => {
   if (existsSync(path)) {
     return false;
   }
-  const file = createWriteStream(path);
-  const req = await fetch(url);
+  const req = await fetch(url, { headers });
+  if (req.status !== 200) {
+    console.error(`Got a ${req.status} for ${url}`)
+  }
   const blob = await req.blob()
 
-  file.write(await sharp(await blob.bytes()).resize({ width: 220, height: 220, fit: "inside" }).png().toBuffer())
+  const file = createWriteStream(path);
+  try {
+    file.write(await sharp(await blob.bytes()).resize({ width: 220, height: 220, fit: "inside" }).png().toBuffer())
+  } catch (error) {
+    console.error(`Screenshot at ${url} got an issue, @fantomitechno please debug fucking dumbass`)
+    console.error(error)
+  }
   return true;
 }
 
@@ -49,6 +61,7 @@ export const createMod = async (config: Config, mod: GBMod, knownMods: { [id: st
     name: mod.name,
     submitter: mod.submitter,
     lastModification: mod.lastModification,
+    nsfw: mod.nsfw,
     files: mod.files.map(f => f.id).filter(f => existsSync(config.ModDirectory + "/" + f + ".zip")),
     screenshots: mod.screenshots.map(f => f.id).filter(f => existsSync(config.ImagesDirectory + "/" + f + ".png"))
   }
