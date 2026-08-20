@@ -1,5 +1,6 @@
+import { existsSync, readFileSync } from "node:fs";
 import { headers } from ".";
-import type { GBMod } from "./types";
+import type { GBMod, GBScreenshot } from "./types";
 import { sleep } from "./utils.js";
 
 let pageSize = 40;
@@ -10,7 +11,7 @@ const url = (category: string, page: number) => `https://gamebanana.com/apiv8/${
 
 const parseMod = async (category: string, obj: any): Promise<GBMod> => {
   let nsfw = false;
-  let screenshots = obj["_aPreviewMedia"]["_aImages"].slice(0, 2).map((o: any) => {
+  let screenshots: GBScreenshot[] = obj["_aPreviewMedia"]["_aImages"].slice(0, 2).map((o: any) => {
     const url = o["_sBaseUrl"] + "/" + o["_sFile"]
     const id = new URL(url).pathname.split(".").slice(0, -1).join(".").slice(1).replaceAll("/", "_")
     return { url, id }
@@ -22,7 +23,7 @@ const parseMod = async (category: string, obj: any): Promise<GBMod> => {
     let res = await request.json()
 
     if ("show" !== res["_sInitialVisibility"]) {
-      screenshots = ["https://images.gamebanana.com/static/img/DefaultEmbeddables/nsfw.jpg"]
+      screenshots = screenshots.map(s => { return { url: "https://images.gamebanana.com/static/img/DefaultEmbeddables/nsfw.jpg", id: s.id } })
       nsfw = true;
     }
   }
@@ -77,7 +78,7 @@ const requestPage = async (category: string, page: number) => {
   return {};
 }
 
-const crawlModsCategory = async (category: string) => {
+const crawlModsCategoryFull = async (category: string) => {
   let fullmodList: { [id: string]: GBMod } = {};
   let page = 1;
   let pageContent = await requestPage(category, page);
@@ -93,4 +94,4 @@ const crawlModsCategory = async (category: string) => {
   return Object.values(fullmodList);
 }
 
-export { requestPage, crawlModsCategory };
+export { requestPage, crawlModsCategoryFull };

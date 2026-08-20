@@ -1,4 +1,4 @@
-import { crawlModsCategory } from "./crawlGB.js";
+import { crawlModsCategoryFull } from "./crawlGB.js";
 import { parse } from "smol-toml";
 import { mkdirSync, readFileSync, existsSync, writeFileSync } from "node:fs";
 import type { Config, GBFile, GBMod, GBScreenshot, KnownMod } from "./types.js";
@@ -46,7 +46,7 @@ const main = async () => {
 
   const mods: GBMod[] = []
   for (const category of validCategories) {
-    mods.push(...await crawlModsCategory(category));
+    mods.push(...await crawlModsCategoryFull(category));
   }
 
   console.log(`Discovered ${mods.length} mods on Gamebanana`);
