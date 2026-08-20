@@ -19,17 +19,31 @@ There is 3 ways to input on the script:
 Every loop runs the main() function:
 
 - Read `config.toml`
+
+Every 8 runs (including the first one):
+
 - Call the gamebanana API to collect every projects in `Mod`, `Wip` and `Tool` for the game Celeste
 - Load the local database `{ModDirectory}/mods.json` and compare both.
 - Create all new mods (creation = download of all zip files to ModDirectory and the first 2 screenshots to ImageDirectory)
-- Put as up for deletion all unknown zip files
+- Delete from database (not disk) all unknown zip files
 - Download all new zip files
-- Put as up for deletion all unknown screenshots
+- Delete from database (not disk) all unknown screenshots
 - Download all new screenshots
-- Put as up for deletion all unknown mods
+- Delete from database (not disk) all unknown mods
 - Process map icons (this step will also delete from database and disk all possibly corrupted zip files to allow for a clean download at next run)
 
-### "Up for deletion"?
+Every other run:
+
+- Call the gamebanana API to collect all newly updated projects in `Mod`, `Wip` and `Tool` for the game Celeste
+- Load the local database `{ModDirectory}/mods.json` and compare both.
+- Create all new mods (creation = download of all zip files to ModDirectory and the first 2 screenshots to ImageDirectory)
+- Delete from database (not disk) all unknown zip files
+- Download all new zip files
+- Delete from database (not disk) all unknown screenshots
+- Download all new screenshots
+- Process map icons (this step will also delete from database and disk all possibly corrupted zip files to allow for a clean download at next run)
+
+### I want to delete from disk
 
 In the possibility of a gamebanana outage, the gamebanana API would send back an empty array and to not _nuke_ your own mirror by mistake, the deletion are just made in the database and not on disk.
 

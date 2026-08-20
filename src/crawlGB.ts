@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { headers } from ".";
 import type { GBMod, GBScreenshot } from "./types";
 import { sleep } from "./utils.js";
@@ -7,7 +7,9 @@ let pageSize = 40;
 
 const game = 6460; // Celeste
 
-const url = (category: string, page: number) => `https://gamebanana.com/apiv8/${category}/ByGame?_aGameRowIds[]=${game}&_csvProperties=_idRow,_sName,_aFiles,_aSubmitter,_tsDateAdded,_tsDateModified,_tsDateUpdated,_aPreviewMedia,_sProfileUrl,_bIsNsfw&_sOrderBy=_idRow,ASC&_nPage=${page}&_nPerpage=${pageSize})`;
+const pageUrl = (category: string, page: number) => `https://gamebanana.com/apiv8/${category}/ByGame?_aGameRowIds[]=${game}&_csvProperties=_idRow,_sName,_aFiles,_aSubmitter,_tsDateAdded,_tsDateModified,_tsDateUpdated,_aPreviewMedia,_sProfileUrl,_bIsNsfw&_sOrderBy=_idRow,ASC&_nPage=${page}&_nPerpage=${pageSize})`;
+const infoPageUrl = (category: string, page: number) => `https://gamebanana.com/apiv10/${category}/Index?_nPage=${page}&_nPerpage=${pageSize}&_aFilters[Generic_Game]=${game}&_sSort=Generic_LatestModified`
+const modPageUrl = (category: string, modId: number) => `https://gamebanana.com/apiv8/${category}/${modId}?_csvProperties=_idRow,_sName,_aFiles,_aSubmitter,_sDescription,_sText,_nLikeCount,_nViewCount,_nDownloadCount,_aCategory,_tsDateAdded,_tsDateModified,_tsDateUpdated,_aPreviewMedia,_sProfileUrl,_bIsNsfw&ts=${new Date().getMilliseconds()}`
 
 const parseMod = async (category: string, obj: any): Promise<GBMod> => {
   let nsfw = false;
@@ -38,9 +40,9 @@ const parseMod = async (category: string, obj: any): Promise<GBMod> => {
   }
 }
 
-const requestPage = async (category: string, page: number) => {
+const requestFullPage = async (category: string, page: number) => {
   console.log(`Loading page ${page} for ${category}`);
-  let request = await fetch(url(category, page), { headers });
+  let request = await fetch(pageUrl(category, page), { headers });
   let tries = 0;
   while (tries < 3) {
     const text = await request.text()
@@ -52,7 +54,7 @@ const requestPage = async (category: string, page: number) => {
     if (text.length == 0) {
       await sleep(5000 * tries);
       tries++
-      request = await fetch(url(category, page), { headers });
+      request = await fetch(pageUrl(category, page), { headers });
       continue;
     }
 
@@ -69,7 +71,7 @@ const requestPage = async (category: string, page: number) => {
       if (error instanceof SyntaxError) {
         await sleep(5000 * tries);
         tries++
-        request = await fetch(url(category, page), { headers });
+        request = await fetch(pageUrl(category, page), { headers });
         continue;
       }
       throw error;
@@ -78,20 +80,135 @@ const requestPage = async (category: string, page: number) => {
   return {};
 }
 
+const requestPage = async (category: string, page: number): Promise<{ _tsDateModified: number, _idRow: number }[] | null> => {
+  console.log(`Loading page ${page} for ${category}`);
+  let request = await fetch(infoPageUrl(category, page), { headers });
+  let tries = 0;
+  while (tries < 3) {
+    const text = await request.text()
+    if (request.status !== 200) {
+      console.error(`Got a ${request.status} for ${request.url}: ${text}`)
+    }
+    pageSize++
+    if (pageSize > 50) pageSize = 40;
+    if (text.length == 0) {
+      await sleep(5000 * tries);
+      tries++
+      request = await fetch(infoPageUrl(category, page), { headers });
+      continue;
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (error: unknown) {
+      if (error instanceof SyntaxError) {
+        await sleep(5000 * tries);
+        tries++
+        request = await fetch(infoPageUrl(category, page), { headers });
+        continue;
+      }
+      throw error;
+    }
+  }
+  return null;
+}
+
+const requestMod = async (category: string, modId: number) => {
+  console.log(`Loading mod ${modId} for ${category}`);
+  let request = await fetch(modPageUrl(category, modId), { headers });
+  let tries = 0;
+  while (tries < 3) {
+    const text = await request.text()
+    if (request.status !== 200) {
+      console.error(`Got a ${request.status} for ${request.url}: ${text}`)
+    }
+    pageSize++
+    if (pageSize > 50) pageSize = 40;
+    if (text.length == 0) {
+      await sleep(5000 * tries);
+      tries++
+      request = await fetch(modPageUrl(category, modId), { headers });
+      continue;
+    }
+
+    try {
+      const obj = JSON.parse(text);
+      return await parseMod(category, obj);
+    } catch (error: unknown) {
+      if (error instanceof SyntaxError) {
+        await sleep(5000 * tries);
+        tries++
+        request = await fetch(modPageUrl(category, modId), { headers });
+        continue;
+      }
+      throw error;
+    }
+  }
+  return null;
+}
+
 const crawlModsCategoryFull = async (category: string) => {
   let fullmodList: { [id: string]: GBMod } = {};
   let page = 1;
-  let pageContent = await requestPage(category, page);
+  let pageContent = await requestFullPage(category, page);
   while (Object.keys(pageContent).length > 0) {
     fullmodList = {
       ...fullmodList,
       ...pageContent
     };
     page++;
-    pageContent = await requestPage(category, page);
+    pageContent = await requestFullPage(category, page);
   }
+
+  let lastModification = Math.max(...Object.values(fullmodList).map(m => m.lastModification));
+
+  let lastUpdateObject: { [category: string]: number } = {};
+  if (existsSync("state.json")) {
+    let stateFile = readFileSync("state.json");
+    lastUpdateObject = JSON.parse(stateFile.toString());
+  }
+
+  lastUpdateObject[category] = lastModification;
+  writeFileSync("state.json", JSON.stringify(lastUpdateObject));
 
   return Object.values(fullmodList);
 }
 
-export { requestPage, crawlModsCategoryFull };
+/** @unused because I do not have the logic to not delete what I do not know aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa */
+const crawlModsCategory = async (category: string) => {
+  let lastUpdateObject: { [category: string]: number } = { category: 0 };
+  if (existsSync("state.json")) {
+    let stateFile = readFileSync("state.json");
+    lastUpdateObject = JSON.parse(stateFile.toString());
+  }
+  let fullmodList: { [id: string]: GBMod } = {};
+
+  let lastUpdate = lastUpdateObject[category];
+
+  let page = 1;
+  while (true) {
+    const pageContent = await requestPage(category, page)
+    if (!pageContent) break;
+
+    for (const mod of pageContent) {
+      if (mod._tsDateModified > lastUpdateObject[category]) {
+
+        const modInfo = await requestMod(category, mod._idRow);
+        if (modInfo) {
+          lastUpdate = Math.max(mod._tsDateModified, lastUpdate);
+          fullmodList[modInfo.id] = modInfo
+        }
+      } else {
+        lastUpdateObject[category] = lastUpdate;
+        writeFileSync("state.json", JSON.stringify(lastUpdateObject));
+        return Object.values(fullmodList);
+      }
+    }
+  }
+
+  lastUpdateObject[category] = lastUpdate;
+  writeFileSync("state.json", JSON.stringify(lastUpdateObject));
+  return Object.values(fullmodList);
+}
+
+export { crawlModsCategoryFull, crawlModsCategory };

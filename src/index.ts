@@ -1,4 +1,4 @@
-import { crawlModsCategoryFull } from "./crawlGB.js";
+import { crawlModsCategory, crawlModsCategoryFull } from "./crawlGB.js";
 import { parse } from "smol-toml";
 import { mkdirSync, readFileSync, existsSync, writeFileSync } from "node:fs";
 import type { Config, GBFile, GBMod, GBScreenshot, KnownMod } from "./types.js";
@@ -8,6 +8,15 @@ import { searchIcons } from "./icons.js";
 const args = process.argv
 let timeout = 30;
 let repeat = true;
+let runNumber = 0;
+let isFullRun = () => runNumber == 0;
+
+let bumpRunNumber = () => {
+  runNumber++;
+  if (runNumber >= 8) {
+    runNumber == 0;
+  }
+}
 
 export const headers = { "User-Agent": "Celeste Gamebanana Mirror/0.2 (+https://github.com/fantomitechno/GamebananaCelesteMirror)" };
 
@@ -45,8 +54,14 @@ const main = async () => {
   ensureFolderExist(config);
 
   const mods: GBMod[] = []
-  for (const category of validCategories) {
-    mods.push(...await crawlModsCategoryFull(category));
+  if (isFullRun()) {
+    for (const category of validCategories) {
+      mods.push(...await crawlModsCategoryFull(category));
+    }
+  } else {
+    for (const category of validCategories) {
+      mods.push(...await crawlModsCategory(category));
+    }
   }
 
   console.log(`Discovered ${mods.length} mods on Gamebanana`);
@@ -85,7 +100,6 @@ const main = async () => {
   const filesToDelete: number[] = [];
   const screenshotsToCreate: string[] = [];
   const screenshotsToDelete: string[] = [];
-  const modsToDelete: string[] = Object.values(knownMods).filter(m => !mods.map(dm => dm.id).includes(m.id)).map(m => m.id);
 
   for (const mod of mods) {
     const knownMod = knownMods[mod.id]
@@ -99,17 +113,17 @@ const main = async () => {
     const files = mod.files.map(f => f.id);
     const screenshots = mod.screenshots.map(f => f.id);
 
-    const missingFiles = knownMod.files.filter(f => !files.includes(f));
+
     const extraFiles = files.filter(f => !knownMod.files.includes(f));
-
     filesToCreate.push(...extraFiles)
-    filesToDelete.push(...missingFiles)
-
-    const missingScreenshots = knownMod.screenshots.filter(f => !screenshots.includes(f));
     const extraScreenshots = screenshots.filter(f => !knownMod.screenshots.includes(f));
-
     screenshotsToCreate.push(...extraScreenshots)
+
+    const missingFiles = knownMod.files.filter(f => !files.includes(f));
+    filesToDelete.push(...missingFiles)
+    const missingScreenshots = knownMod.screenshots.filter(f => !screenshots.includes(f));
     screenshotsToDelete.push(...missingScreenshots)
+
   }
 
   if (modsToCreate.length) {
@@ -161,10 +175,13 @@ const main = async () => {
     }
   }
 
-  if (modsToDelete.length) {
-    console.log(`${modsToDelete.length} mods will be deleted`)
-    for (const mod of modsToDelete) {
-      knownMods = deleteMod(mod, knownMods);
+  if (isFullRun()) {
+    const modsToDelete: string[] = Object.values(knownMods).filter(m => !mods.map(dm => dm.id).includes(m.id)).map(m => m.id);
+    if (modsToDelete.length) {
+      console.log(`${modsToDelete.length} mods will be deleted`)
+      for (const mod of modsToDelete) {
+        knownMods = deleteMod(mod, knownMods);
+      }
     }
   }
   writeFileSync(config.ModDirectory + "/mods.json", JSON.stringify(knownMods))
