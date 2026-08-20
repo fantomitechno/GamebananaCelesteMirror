@@ -59,7 +59,6 @@ export const createMod = async (config: Config, mod: GBMod, knownMods: { [id: st
   knownMods[mod.id] = {
     id: mod.id,
     name: mod.name,
-    submitter: mod.submitter,
     lastModification: mod.lastModification,
     nsfw: mod.nsfw,
     files: mod.files.map(f => f.id).filter(f => existsSync(config.ModDirectory + "/" + f + ".zip")),

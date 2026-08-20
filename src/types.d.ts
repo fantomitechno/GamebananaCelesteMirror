@@ -16,7 +16,6 @@ export interface GBScreenshot {
 export interface GenericMod {
   name: string
   lastModification: number
-  submitter: string
   id: string
   nsfw: boolean
 }
