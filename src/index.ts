@@ -122,9 +122,13 @@ const main = async () => {
   }
 
   const knownFiles: { [id: number]: string } = {}
+  const knownScreenshots: { [id: string]: string } = {}
   Object.values(knownMods).map(m => {
     m.files.forEach(f => {
       knownFiles[f] = m.id;
+    })
+    m.screenshots.forEach(s => {
+      knownScreenshots[s] = m.id;
     })
   });
 
@@ -146,7 +150,7 @@ const main = async () => {
   if (screenshotsToDelete.length) {
     console.log(`${screenshotsToDelete.length} screenshots will be deleted`)
     for (const screenshot of screenshotsToDelete) {
-      knownMods = deleteScs(screenshot, knownMods, knownFiles);
+      knownMods = deleteScs(screenshot, knownMods, knownScreenshots);
     }
   }
 

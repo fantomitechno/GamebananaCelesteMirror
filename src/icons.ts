@@ -1,7 +1,7 @@
 import AdmZip from "adm-zip";
 import type { Config, KnownMod } from "./types.js";
 import { createXXHash64 } from "hash-wasm";
-import { createWriteStream, existsSync, readFileSync, unlinkSync, writeFileSync } from "fs";
+import { createWriteStream, existsSync, writeFileSync } from "fs";
 import { deleteFile } from "./files.js";
 
 export const searchIcons = async (config: Config, knownMods: { [id: number]: KnownMod }) => {
