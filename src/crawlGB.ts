@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { headers } from ".";
+import { headers } from "./index.js";
 import type { GBMod, GBScreenshot } from "./types";
 import { sleep } from "./utils.js";
 

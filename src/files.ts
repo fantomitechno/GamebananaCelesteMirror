@@ -2,7 +2,7 @@ import { existsSync, createWriteStream, unlinkSync } from "node:fs";
 import { Config, GBFile, GBMod, GBScreenshot, KnownMod } from "./types"
 import { sleep } from "./utils.js";
 import sharp from "sharp";
-import { headers } from ".";
+import { headers } from "./index.js";
 
 const downloadFile = async (url: string, path: string) => {
   if (existsSync(path)) {
