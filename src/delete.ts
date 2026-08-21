@@ -1,6 +1,8 @@
 import { parse } from "smol-toml";
 import { mkdirSync, readFileSync, existsSync, unlinkSync, readdirSync } from "node:fs";
 import type { Config, KnownMod } from "./types.js";
+import { loadFile } from "./utils.js";
+import { join } from "node:path";
 
 const ensureFolderExist = (config: Config) => {
   if (!existsSync(config.ImagesDirectory)) mkdirSync(config.ImagesDirectory);
@@ -16,11 +18,7 @@ const main = async () => {
   ensureFolderExist(config);
 
 
-  let knownMods: KnownMod[] = [];
-  if (existsSync(config.ModDirectory + "/mods.json")) {
-    const knownFile = readFileSync(config.ModDirectory + "/mods.json");
-    knownMods = Object.values(JSON.parse(knownFile.toString()));
-  }
+  let knownMods: KnownMod[] = Object.values(loadFile(join(config.ModDirectory, "mods.json"), {}));
 
 
   const knownFiles: string[] = [];
@@ -36,15 +34,11 @@ const main = async () => {
   })
 
 
-  let knownIcons: string[] = [];
-  if (existsSync(config.RichPresenceDirectory + "/list.json")) {
-    const knownFile = readFileSync(config.RichPresenceDirectory + "/list.json");
-    knownIcons = JSON.parse(knownFile.toString()).map((i: string) => i + ".png");
-  }
+  let knownIcons: string[] = loadFile(join(config.RichPresenceDirectory, "list.json"), []);
 
-  const toDeleteScreenshots = readdirSync(config.ImagesDirectory).filter(s => !knownScreenshots.includes(s) && s.endsWith(".png")).map(f => config.ImagesDirectory + "/" + f);
-  const toDeleteFiles = readdirSync(config.ModDirectory).filter(s => !knownFiles.includes(s) && s.endsWith(".zip")).map(f => config.ModDirectory + "/" + f);
-  const toDeleteIcons = readdirSync(config.RichPresenceDirectory).filter(s => !knownIcons.includes(s) && s.endsWith(".png")).map(f => config.RichPresenceDirectory + "/" + f);
+  const toDeleteScreenshots = readdirSync(config.ImagesDirectory).filter(s => !knownScreenshots.includes(s) && s.endsWith(".png")).map(f => join(config.ImagesDirectory, f));
+  const toDeleteFiles = readdirSync(config.ModDirectory).filter(s => !knownFiles.includes(s) && s.endsWith(".zip")).map(f => join(config.ModDirectory, f));
+  const toDeleteIcons = readdirSync(config.RichPresenceDirectory).filter(s => !knownIcons.includes(s) && s.endsWith(".png")).map(f => join(config.RichPresenceDirectory, f));
 
   console.log(`Gotta delete ${toDeleteFiles.length} zip files, ${toDeleteScreenshots.length} screenshots and ${toDeleteIcons.length} icons`);
 

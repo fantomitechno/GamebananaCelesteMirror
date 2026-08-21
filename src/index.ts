@@ -4,6 +4,8 @@ import { mkdirSync, readFileSync, existsSync, writeFileSync } from "node:fs";
 import type { Config, GBFile, GBMod, GBScreenshot, KnownMod } from "./types.js";
 import { createFile, createMod, createScs, deleteFile, deleteMod, deleteScs } from "./files.js";
 import { searchIcons } from "./icons.js";
+import { loadFile } from "./utils.js";
+import { join } from "node:path";
 
 const args = process.argv
 let timeout = 30;
@@ -52,6 +54,7 @@ const main = async () => {
   const configFile = readFileSync("./config.toml");
   const config = (parse(configFile.toString()) as object as Config)
   ensureFolderExist(config);
+  const modsjson = join(config.ModDirectory, "mods.json")
 
   const mods: GBMod[] = []
   if (isFullRun()) {
@@ -66,11 +69,7 @@ const main = async () => {
 
   console.log(`Discovered ${mods.length} mods on Gamebanana`);
 
-  let knownMods: { [id: string]: KnownMod } = {};
-  if (existsSync(config.ModDirectory + "/mods.json")) {
-    const knownFile = readFileSync(config.ModDirectory + "/mods.json")
-    knownMods = JSON.parse(knownFile.toString());
-  }
+  let knownMods = loadFile<{ [id: string]: KnownMod }>(modsjson, {});
   console.log(`${Object.keys(knownMods).length} mods are in the system`);
 
   const discoveredFiles: { [id: number]: GBFile & { modId: string } } = {};
@@ -132,7 +131,7 @@ const main = async () => {
     for (const mod of modsToCreate) {
       knownMods = await createMod(config, mod, knownMods);
     }
-    writeFileSync(config.ModDirectory + "/mods.json", JSON.stringify(knownMods))
+    writeFileSync(modsjson, JSON.stringify(knownMods))
   }
 
   const knownFiles: { [id: number]: string } = {}
@@ -184,11 +183,12 @@ const main = async () => {
       }
     }
   }
-  writeFileSync(config.ModDirectory + "/mods.json", JSON.stringify(knownMods))
+  writeFileSync(modsjson, JSON.stringify(knownMods))
 
   await searchIcons(config, knownMods);
 
   console.log("Finished processing")
+  bumpRunNumber()
   if (repeat) setTimeout(main, timeout * 60 * 1000)
 }
 

@@ -3,6 +3,7 @@ import { Config, GBFile, GBMod, GBScreenshot, KnownMod } from "./types"
 import { sleep } from "./utils.js";
 import sharp from "sharp";
 import { headers } from "./index.js";
+import { join } from "node:path";
 
 const downloadFile = async (url: string, path: string) => {
   if (existsSync(path)) {
@@ -46,13 +47,13 @@ const downloadImage = async (url: string, path: string) => {
 
 export const createMod = async (config: Config, mod: GBMod, knownMods: { [id: string]: KnownMod }) => {
   for (const file of mod.files) {
-    const downloaded = await downloadFile(file.url, config.ModDirectory + "/" + file.id + ".zip")
+    const downloaded = await downloadFile(file.url, join(config.ModDirectory, file.id + ".zip"))
     if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
   }
 
 
   for (const scs of mod.screenshots) {
-    const downloaded = await downloadImage(scs.url, config.ImagesDirectory + "/" + scs.id + ".png")
+    const downloaded = await downloadImage(scs.url, join(config.ImagesDirectory, scs.id + ".png"))
     if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
   }
 
@@ -61,8 +62,8 @@ export const createMod = async (config: Config, mod: GBMod, knownMods: { [id: st
     name: mod.name,
     lastModification: mod.lastModification,
     nsfw: mod.nsfw,
-    files: mod.files.map(f => f.id).filter(f => existsSync(config.ModDirectory + "/" + f + ".zip")),
-    screenshots: mod.screenshots.map(f => f.id).filter(f => existsSync(config.ImagesDirectory + "/" + f + ".png"))
+    files: mod.files.map(f => f.id).filter(f => existsSync(join(config.ModDirectory, f + ".zip"))),
+    screenshots: mod.screenshots.map(f => f.id).filter(f => existsSync(join(config.ImagesDirectory, f + ".png")))
   }
 
   return knownMods;
@@ -74,8 +75,8 @@ export const deleteMod = (modId: string, knownMods: { [id: string]: KnownMod }) 
 }
 
 export const deleteFile = (config: Config, file: number, knownMods: { [id: string]: KnownMod }, knownFiles: { [id: number]: string }, force: boolean = false) => {
-  if (existsSync(config.ModDirectory + "/" + file + ".zip") && force) {
-    unlinkSync(config.ModDirectory + "/" + file + ".zip")
+  if (existsSync(join(config.ModDirectory, file + ".zip")) && force) {
+    unlinkSync(join(config.ModDirectory, file + ".zip"))
   }
 
   const modId = knownFiles[file];
@@ -91,10 +92,10 @@ export const deleteFile = (config: Config, file: number, knownMods: { [id: strin
 export const createFile = async (config: Config, fileId: number, knownMods: { [id: string]: KnownMod }, discoveredFiles: { [id: number]: GBFile & { modId: string } }) => {
   const file = discoveredFiles[fileId];
 
-  const downloaded = await downloadFile(file.url, config.ModDirectory + "/" + fileId + ".zip")
+  const downloaded = await downloadFile(file.url, join(config.ModDirectory, fileId + ".zip"))
   if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
 
-  if (existsSync(config.ModDirectory + "/" + file + ".zip")) {
+  if (existsSync(join(config.ModDirectory, file + ".zip"))) {
     knownMods[file.modId].files.push(fileId);
   }
 
@@ -115,10 +116,10 @@ export const deleteScs = (screenshot: string, knownMods: { [id: string]: KnownMo
 export const createScs = async (config: Config, screenshot: string, knownMods: { [id: string]: KnownMod }, discoveredScreenshots: { [id: string]: GBScreenshot & { modId: string } }) => {
   const file = discoveredScreenshots[screenshot];
 
-  const downloaded = await downloadImage(file.url, config.ModDirectory + "/" + screenshot + ".png")
+  const downloaded = await downloadImage(file.url, join(config.ModDirectory, screenshot + ".png"))
   if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
 
-  if (existsSync(config.ModDirectory + "/" + screenshot + ".png")) {
+  if (existsSync(join(config.ModDirectory, screenshot + ".png"))) {
     knownMods[file.modId].screenshots.push(screenshot);
   }
 
