@@ -99,7 +99,7 @@ const requestPage = async (category: string, page: number): Promise<{ _tsDateMod
     }
 
     try {
-      return JSON.parse(text);
+      return JSON.parse(text)["_aRecords"];
     } catch (error: unknown) {
       if (error instanceof SyntaxError) {
         await sleep(5000 * tries);
