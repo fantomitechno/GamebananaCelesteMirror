@@ -21,12 +21,13 @@ export const searchIcons = async (config: Config, knownMods: { [id: number]: Kno
         console.error(`${config.ModDirectory}/${file}.zip is empty or inexistant`)
         const knownFile: { [id: number]: string } = {}
         knownFile[file] = mod.id
-        deleteFile(config, file, knownMods, knownFile, true)
+        knownMods = deleteFile(config, file, knownMods, knownFile, true)
       }
     }
   }
 
   writeFileSync(join(config.RichPresenceDirectory, "/list.json"), JSON.stringify(iconsList))
+  writeFileSync(join(config.ModDirectory, "mods.json"), JSON.stringify(knownMods))
 }
 
 
