@@ -46,7 +46,7 @@ const ensureFolderExist = (config: Config) => {
   if (!existsSync(config.RichPresenceDirectory)) mkdirSync(config.RichPresenceDirectory);
 }
 
-const validCategories = ["Mod", "Tool", "Wips"]
+const validCategories = ["Mod", "Tool", "Wip"]
 
 const main = async () => {
   console.log("Starting update");
