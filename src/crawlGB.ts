@@ -49,8 +49,6 @@ const requestFullPage = async (config: Config, category: string, page: number) =
     if (request.status !== 200) {
       console.error(`Got a ${request.status} for ${request.url}: ${text}`)
     }
-    pageSize++
-    if (pageSize > 50) pageSize = 40;
     if (text.length == 0) {
       await sleep(5000 * tries);
       tries++
@@ -89,8 +87,6 @@ const requestPage = async (category: string, page: number): Promise<{ _tsDateMod
     if (request.status !== 200) {
       console.error(`Got a ${request.status} for ${request.url}: ${text}`)
     }
-    pageSize++
-    if (pageSize > 50) pageSize = 40;
     if (text.length == 0) {
       await sleep(5000 * tries);
       tries++
@@ -122,8 +118,6 @@ const requestMod = async (config: Config, category: string, modId: number) => {
     if (request.status !== 200) {
       console.error(`Got a ${request.status} for ${request.url}: ${text}`)
     }
-    pageSize++
-    if (pageSize > 50) pageSize = 40;
     if (text.length == 0) {
       await sleep(5000 * tries);
       tries++
@@ -170,6 +164,8 @@ const crawlModsCategoryFull = async (config: Config, category: string) => {
 
   lastUpdateObject[category] = lastModification;
   writeFileSync("state.json", JSON.stringify(lastUpdateObject));
+  pageSize++
+  if (pageSize > 50) pageSize = 40;
 
   return Object.values(fullmodList);
 }
@@ -207,6 +203,8 @@ const crawlModsCategory = async (config: Config, category: string) => {
 
   lastUpdateObject[category] = lastUpdate;
   writeFileSync("state.json", JSON.stringify(lastUpdateObject));
+  pageSize++
+  if (pageSize > 50) pageSize = 40;
   return Object.values(fullmodList);
 }
 
