@@ -34,7 +34,7 @@ const parseMod = async (config: Config, category: string, obj: any): Promise<GBM
     id: category.toLowerCase() + "_" + obj["_idRow"],
     lastModification: obj["_tsDateModified"],
     name: obj["_sName"],
-    files: obj["_aFiles"].filter((o: any) => o["_sFile"].endsWith(".zip") && (!o["_bIsArchived"] || !config.DownloadArchived)).map((o: any) => { return { url: o["_sDownloadUrl"], id: o["_idRow"] } }),
+    files: obj["_aFiles"]?.filter((o: any) => o["_sFile"].endsWith(".zip") && (!o["_bIsArchived"] || !config.DownloadArchived)).map((o: any) => { return { url: o["_sDownloadUrl"], id: o["_idRow"] } }) ?? [],
     screenshots,
     nsfw
   }
