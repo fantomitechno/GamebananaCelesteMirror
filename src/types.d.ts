@@ -29,4 +29,6 @@ export interface Config {
   ModDirectory: string;
   ImagesDirectory: string;
   RichPresenceDirectory: string;
+
+  DownloadArchived: boolean
 }

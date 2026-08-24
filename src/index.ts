@@ -59,11 +59,11 @@ const main = async () => {
   const mods: GBMod[] = []
   if (isFullRun()) {
     for (const category of validCategories) {
-      mods.push(...await crawlModsCategoryFull(category));
+      mods.push(...await crawlModsCategoryFull(config, category));
     }
   } else {
     for (const category of validCategories) {
-      mods.push(...await crawlModsCategory(category));
+      mods.push(...await crawlModsCategory(config, category));
     }
   }
 
