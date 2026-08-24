@@ -13,7 +13,8 @@ const downloadFile = async (url: string, path: string) => {
   const req = await fetch(url, { headers });
 
   if (req.status !== 200) {
-    console.error(`Got a ${req.status} for ${url}`)
+    console.error(`Got a ${req.status} for ${url}`);
+    return false;
   }
   const blob = await req.blob()
   const bytes = await blob.bytes();
@@ -31,7 +32,8 @@ const downloadImage = async (url: string, path: string) => {
   }
   const req = await fetch(url, { headers });
   if (req.status !== 200) {
-    console.error(`Got a ${req.status} for ${url}`)
+    console.error(`Got a ${req.status} for ${url}`);
+    return false;
   }
   const blob = await req.blob()
 
