@@ -1,4 +1,3 @@
-import { crawlModsCategory, crawlModsCategoryFull } from "./crawlGB.js";
 import { mkdirSync, existsSync } from "node:fs";
 import type { Config, ProviderFile, ProviderMod, ProviderScreenshot } from "./types.js";
 import { createFile, createMod, createScs, deleteFile, deleteMod, deleteScs } from "./files.js";
@@ -6,6 +5,7 @@ import { searchForMapIcons } from "./icons.js";
 import { getConfig } from "./utils.js";
 import { deletedModDatabase, modDatabase } from "./databases.js";
 import { parseDeleteForArchiving } from "./delete.js";
+import { loadMods } from "./providers/index.js";
 
 const args = process.argv;
 let timeout = 30;
@@ -49,24 +49,12 @@ const ensureFolderExist = (config: Config) => {
   if (!existsSync(config.ModsArchiveDirectory)) mkdirSync(config.ModsArchiveDirectory);
 };
 
-const validCategories = ["Mod", "Tool", "Wip"];
-// const validCategories = ["Tool"];
-
 ensureFolderExist(getConfig());
 
 const main = async () => {
   console.log("Starting update");
 
-  const mods: ProviderMod[] = [];
-  if (isFullRun()) {
-    for (const category of validCategories) {
-      mods.push(...(await crawlModsCategoryFull(category)));
-    }
-  } else {
-    for (const category of validCategories) {
-      mods.push(...(await crawlModsCategory(category)));
-    }
-  }
+  const mods = await loadMods(isFullRun());
 
   console.log(`Discovered ${mods.length} mods on Gamebanana`);
 

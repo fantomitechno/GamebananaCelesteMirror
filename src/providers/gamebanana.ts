@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { headers } from "./index.js";
-import type { ProviderMod, ProviderScreenshot } from "./types";
-import { getConfig, sleep } from "./utils.js";
+import { headers } from "../index.js";
+import type { ProviderMod, ProviderScreenshot } from "../types";
+import { getConfig, sleep } from "../utils.js";
 
 let pageSize = 40;
 
@@ -234,4 +234,20 @@ const crawlModsCategory = async (category: string) => {
   return Object.values(fullmodList);
 };
 
-export { crawlModsCategoryFull, crawlModsCategory };
+const validCategories = ["Mod", "Tool", "Wip"];
+// const validCategories = ["Tool"];
+
+export const loadMods = async (fullRun: boolean) => {
+  const mods: ProviderMod[] = [];
+  if (fullRun) {
+    for (const category of validCategories) {
+      mods.push(...(await crawlModsCategoryFull(category)));
+    }
+  } else {
+    for (const category of validCategories) {
+      mods.push(...(await crawlModsCategory(category)));
+    }
+  }
+
+  return mods;
+};

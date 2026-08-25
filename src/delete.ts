@@ -10,7 +10,7 @@ export const parseDeleteForArchiving = () => {
     // console.log(passedDays)
     if (passedDays > 7) {
       deletedModDatabase.removeEntry(mod.id);
-      fullyDeletedModDatabase.pushEntry(mod);
+      fullyDeletedModDatabase.pushEntry(mod); // REWRITE
 
       for (const file of mod.files) {
         renameSync(
