@@ -6,7 +6,7 @@ import { join } from "path";
 import { modDatabase } from "./databases.js";
 import { getConfig } from "./utils.js";
 
-export const searchIcons = async () => {
+export const searchForMapIcons = async () => {
   const iconsList: string[] = [];
   for (const mod of modDatabase.list()) {
     for (const file of mod.files) {

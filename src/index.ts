@@ -1,12 +1,11 @@
 import { crawlModsCategory, crawlModsCategoryFull } from "./crawlGB.js";
-import { parse } from "smol-toml";
-import { mkdirSync, readFileSync, existsSync, writeFileSync } from "node:fs";
-import type { Config, DeletedMod, GBFile, GBMod, GBScreenshot, KnownMod } from "./types.js";
+import { mkdirSync, existsSync } from "node:fs";
+import type { Config, GBFile, GBMod, GBScreenshot } from "./types.js";
 import { createFile, createMod, createScs, deleteFile, deleteMod, deleteScs } from "./files.js";
-import { searchIcons } from "./icons.js";
-import { getConfig, loadFile } from "./utils.js";
-import { join } from "node:path";
+import { searchForMapIcons } from "./icons.js";
+import { getConfig } from "./utils.js";
 import { deletedModDatabase, modDatabase } from "./databases.js";
+import { parseDeleteForArchiving } from "./delete.js";
 
 const args = process.argv
 let timeout = 30;
@@ -45,10 +44,11 @@ const ensureFolderExist = (config: Config) => {
   if (!existsSync(config.ImagesDirectory)) mkdirSync(config.ImagesDirectory);
   if (!existsSync(config.ModDirectory)) mkdirSync(config.ModDirectory);
   if (!existsSync(config.RichPresenceDirectory)) mkdirSync(config.RichPresenceDirectory);
+  if (!existsSync(config.ModsArchiveDirectory)) mkdirSync(config.ModsArchiveDirectory);
 }
 
 // const validCategories = ["Mod", "Tool", "Wip"]
-const validCategories = ["Wip"];
+const validCategories = ["Tool"];
 
 ensureFolderExist(getConfig());
 
@@ -182,11 +182,13 @@ const main = async () => {
         deleteMod(mod);
       }
     }
+
+    parseDeleteForArchiving();
   }
   modDatabase.save();
   deletedModDatabase.save();
 
-  await searchIcons();
+  await searchForMapIcons();
 
   console.log("Finished processing")
   bumpRunNumber()
