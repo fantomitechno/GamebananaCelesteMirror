@@ -42,7 +42,11 @@ const downloadImage = async (url: string, path: string) => {
 
   const file = createWriteStream(path);
   try {
-    file.write(await sharp(await blob.bytes()).resize({ width: 220, height: 220, fit: "inside" }).png().toBuffer())
+    let image = sharp(await blob.bytes());
+    if (path.endsWith("nsfw.jpg")) {
+      image = image.resize({ width: 220, height: 220, fit: "inside" });
+    }
+    file.write(await image.png().toBuffer());
   } catch (error) {
     console.error(`Screenshot at ${url} got an issue, @fantomitechno please debug fucking dumbass`)
     console.error(error)

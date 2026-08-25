@@ -14,8 +14,8 @@ const modPageUrl = (category: string, modId: number) => `https://gamebanana.com/
 const parseMod = async (category: string, obj: any): Promise<GBMod> => {
   let nsfw = false;
   let screenshots: GBScreenshot[] = obj["_aPreviewMedia"]["_aImages"].slice(0, 2).map((o: any) => {
-    const url = o["_sBaseUrl"] + "/" + o["_sFile"]
-    const id = new URL(url).pathname.split(".").slice(0, -1).join(".").slice(1).replaceAll("/", "_")
+    const url = o["_sBaseUrl"] + "/" + o["_sFile220"]
+    const id = o["_sFile"].split(".")[0]
     return { url, id }
   })
 
