@@ -29,7 +29,7 @@ export const searchForMapIcons = async () => {
           iconsList.push(...icons);
         }
       } catch (error) {
-        console.error(`${getConfig().ModDirectory}/${file}.zip is empty or inexistant (dropping it)`);
+        console.error(`${getConfig().ModDirectory}/${file}.zip is empty or is not on disk (dropping it)`);
         const knownFile: { [id: number]: string } = {};
         knownFile[file] = mod.id;
         deleteFile(file, knownFile, true);
