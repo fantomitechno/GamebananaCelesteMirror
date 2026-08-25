@@ -6,7 +6,7 @@ import { createFile, createMod, createScs, deleteFile, deleteMod, deleteScs } fr
 import { searchIcons } from "./icons.js";
 import { getConfig, loadFile } from "./utils.js";
 import { join } from "node:path";
-import { modDatabase } from "./databases.js";
+import { deletedModDatabase, modDatabase } from "./databases.js";
 
 const args = process.argv
 let timeout = 30;
@@ -42,13 +42,13 @@ if (args.length > 2) {
 }
 
 const ensureFolderExist = (config: Config) => {
-  if (!existsSync(getConfig().ImagesDirectory)) mkdirSync(getConfig().ImagesDirectory);
-  if (!existsSync(getConfig().ModDirectory)) mkdirSync(getConfig().ModDirectory);
-  if (!existsSync(getConfig().RichPresenceDirectory)) mkdirSync(getConfig().RichPresenceDirectory);
+  if (!existsSync(config.ImagesDirectory)) mkdirSync(config.ImagesDirectory);
+  if (!existsSync(config.ModDirectory)) mkdirSync(config.ModDirectory);
+  if (!existsSync(config.RichPresenceDirectory)) mkdirSync(config.RichPresenceDirectory);
 }
 
-const validCategories = ["Mod", "Tool", "Wip"]
-// const validCategories = ["Tool"];
+// const validCategories = ["Mod", "Tool", "Wip"]
+const validCategories = ["Wip"];
 
 ensureFolderExist(getConfig());
 
@@ -70,6 +70,7 @@ const main = async () => {
 
   modDatabase.load()
   console.log(`${modDatabase.lenght()} mods are in the system`);
+  deletedModDatabase.load();
 
   const discoveredFiles: { [id: number]: GBFile & { modId: string } } = {};
   mods.map(m => {
@@ -182,7 +183,8 @@ const main = async () => {
       }
     }
   }
-  modDatabase.save()
+  modDatabase.save();
+  deletedModDatabase.save();
 
   await searchIcons();
 

@@ -43,15 +43,11 @@ Every other run:
 - Download all new screenshots
 - Process map icons (this step will also delete from database and disk all possibly corrupted zip files to allow for a clean download at next run)
 
-### I want to delete from disk
-
-In the possibility of a gamebanana outage, the gamebanana API would send back an empty array and to not _nuke_ your own mirror by mistake, the deletion are just made in the database and not on disk.
-
-Deletion can be run with `npm run delete` (this will still block if you are deleting more than 50 files at once, this can be bypassed with the environment variable `FORCE` set to **1**)
+### Deletion is being rewritten
 
 ## Acknowledgment
 
-For the calls to the Gamebanana API, I looked at how [Maddie480](https://github.com/maddie480/EverestUpdateCheckerServer) runs her own mirror.
+For the calls to the Gamebanana API, I looked at how Maddie480 runs her own [mirror](https://github.com/maddie480/EverestUpdateCheckerServer) (and its new [version](https://github.com/maddie480/RandomBackendStuff/tree/main/src/main/java/ovh/maddie480/randomstuff/backend/celeste/moddatabase)).
 
 I also used this repository as truth for how to name files.
 

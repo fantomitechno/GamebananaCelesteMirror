@@ -26,12 +26,12 @@ class Database<T extends (BaseMod)> {
     return this._database[id];
   }
 
-  pushListProperty(id: string, property: string, value: unknown) {
+  pushListProperty(id: string, property: string, ...value: unknown[]) {
     const entry = this._database[id] as object as { [prop: string]: unknown };
     if (entry) {
       const prop = entry[property]
       if (prop instanceof Array) {
-        prop.push(value)
+        prop.push(...value)
       }
     }
   }

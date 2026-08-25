@@ -1,34 +1,10 @@
-import { existsSync, createWriteStream, unlinkSync, openSync, readSync, closeSync } from "node:fs";
+import { existsSync, createWriteStream, unlinkSync } from "node:fs";
 import { GBFile, GBMod, GBScreenshot } from "./types"
-import { getConfig, sleep } from "./utils.js";
+import { getChecksum, getConfig, sleep } from "./utils.js";
 import sharp from "sharp";
 import { headers } from "./index.js";
 import { join } from "node:path";
-import { createHash } from "node:crypto";
 import { deletedModDatabase, modDatabase } from "./databases.js";
-
-const BUFFER_SIZE = 8192
-
-const getChecksum = (path: string): string | null => {
-  if (!existsSync(path)) return null;
-
-  const fd = openSync(path, 'r')
-  const hash = createHash('md5')
-  const buffer = Buffer.alloc(BUFFER_SIZE)
-
-  try {
-    let bytesRead
-
-    do {
-      bytesRead = readSync(fd, buffer, 0, BUFFER_SIZE, null)
-      hash.update(buffer.subarray(0, bytesRead))
-    } while (bytesRead === BUFFER_SIZE)
-  } finally {
-    closeSync(fd)
-  }
-
-  return hash.digest('hex')
-}
 
 const downloadFile = async (url: string, path: string, checksum: string) => {
   if (existsSync(path)) {
@@ -100,12 +76,19 @@ export const deleteMod = (modId: string) => {
   const mod = modDatabase.getEntry(modId);
   modDatabase.removeEntry(modId)
 
-  deletedModDatabase.pushEntry({
-    id: modId,
-    name: mod.name,
-    files: mod.files,
-    date: Date.now()
-  })
+  const deletedMod = deletedModDatabase.getEntry(modId);
+
+  if (!deletedMod) {
+    deletedModDatabase.pushEntry({
+      id: modId,
+      name: mod.name,
+      files: mod.files,
+      date: Date.now()
+    });
+  } else {
+    deletedModDatabase.setProperty(modId, "date", Date.now())
+    deletedModDatabase.pushListProperty(modId, "files", ...mod.files);
+  }
 }
 
 export const deleteFile = (file: number, knownFiles: { [id: number]: string }, force: boolean = false) => {
@@ -115,7 +98,22 @@ export const deleteFile = (file: number, knownFiles: { [id: number]: string }, f
 
   const modId = knownFiles[file];
   const mod = modDatabase.getEntry(modId);
-  modDatabase.setProperty(modId, "files", mod.files.filter(f => f != file));
+  modDatabase.setProperty(modId, "files", mod.files.filter(f => f !== file));
+  if (!force) {
+    const deletedMod = deletedModDatabase.getEntry(modId);
+
+    if (!deletedMod) {
+      deletedModDatabase.pushEntry({
+        id: modId,
+        name: mod.name,
+        files: [file],
+        date: Date.now()
+      });
+    } else {
+      deletedModDatabase.setProperty(modId, "date", Date.now())
+      deletedModDatabase.pushListProperty(modId, "files", file);
+    }
+  }
 }
 
 export const createFile = async (fileId: number, discoveredFiles: { [id: number]: GBFile & { modId: string } }) => {
@@ -132,7 +130,7 @@ export const createFile = async (fileId: number, discoveredFiles: { [id: number]
 export const deleteScs = (screenshot: string, knownScreenshots: { [id: string]: string }) => {
   const modId = knownScreenshots[screenshot];
   const mod = modDatabase.getEntry(modId);
-  modDatabase.setProperty(modId, "screenshots", mod.screenshots.filter(f => f != screenshot));
+  modDatabase.setProperty(modId, "screenshots", mod.screenshots.filter(f => f !== screenshot));
 }
 
 export const createScs = async (screenshot: string, discoveredScreenshots: { [id: string]: GBScreenshot & { modId: string } }) => {
