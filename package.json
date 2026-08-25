@@ -5,7 +5,8 @@
   "main": "build",
   "scripts": {
     "build": "tsc",
-    "start": "node ."
+    "start": "node .",
+    "prettier": "prettier **.json src **.md --write"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +22,7 @@
   "devDependencies": {
     "@types/adm-zip": "^0.5.8",
     "@types/node": "^26.2.0",
+    "prettier": "^3.9.6",
     "typescript": "^7.0.2"
   },
   "dependencies": {

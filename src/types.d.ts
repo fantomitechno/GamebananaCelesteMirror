@@ -1,37 +1,37 @@
-export interface GBMod extends GenericMod {
-  files: GBFile[]
-  screenshots: GBScreenshot[]
+export interface ProviderMod extends GenericMod {
+  files: ProviderFile[];
+  screenshots: ProviderScreenshot[];
 }
 
-export interface GBFile {
-  url: string,
-  id: number,
-  checksum: string
+export interface ProviderFile {
+  url: string;
+  id: number;
+  checksum: string;
 }
 
-export interface GBScreenshot {
-  url: string,
-  id: string
+export interface ProviderScreenshot {
+  url: string;
+  id: string;
 }
 
 export interface BaseMod {
-  name: string,
-  id: string,
+  name: string;
+  id: string;
 }
 
 export interface GenericMod extends BaseMod {
-  lastModification: number
-  nsfw: boolean
+  lastModification: number;
+  nsfw: boolean;
 }
 
-export interface KnownMod extends GenericMod {
-  files: number[]
-  screenshots: string[]
+export interface LocalMod extends GenericMod {
+  files: number[];
+  screenshots: string[];
 }
 
 export interface DeletedMod extends BaseMod {
-  date: number,
-  files: number[]
+  date: number;
+  files: number[];
 }
 
 export interface Config {
@@ -40,5 +40,5 @@ export interface Config {
   RichPresenceDirectory: string;
   ModsArchiveDirectory: string;
 
-  DownloadArchived: boolean
+  DownloadArchived: boolean;
 }

@@ -4,18 +4,21 @@ import { join } from "node:path";
 import { deletedModDatabase, fullyDeletedModDatabase } from "./databases.js";
 
 export const parseDeleteForArchiving = () => {
-  fullyDeletedModDatabase.load()
+  fullyDeletedModDatabase.load();
   for (const mod of deletedModDatabase.list()) {
     const passedDays = (Date.now() - mod.date) / (24 * 60 * 60 * 1000);
     // console.log(passedDays)
-    if (passedDays > 0.14) {
+    if (passedDays > 7) {
       deletedModDatabase.removeEntry(mod.id);
       fullyDeletedModDatabase.pushEntry(mod);
 
       for (const file of mod.files) {
-        renameSync(join(getConfig().ModDirectory, file + ".zip"), join(getConfig().ModsArchiveDirectory, mod.id + "_" + file + ".zip"))
+        renameSync(
+          join(getConfig().ModDirectory, file + ".zip"),
+          join(getConfig().ModsArchiveDirectory, mod.id + "_" + file + ".zip"),
+        );
       }
     }
   }
-  fullyDeletedModDatabase.save()
-}
+  fullyDeletedModDatabase.save();
+};

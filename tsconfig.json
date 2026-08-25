@@ -7,9 +7,7 @@
     "rootDir": "./src",
     "outDir": "./build",
     "skipLibCheck": true,
-    "types": [
-      "node"
-    ],
+    "types": ["node"]
   },
   "exclude": ["node_modules", "src/test.ts"]
 }

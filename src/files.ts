@@ -1,5 +1,5 @@
 import { existsSync, createWriteStream, unlinkSync, renameSync } from "node:fs";
-import { GBFile, GBMod, GBScreenshot } from "./types"
+import { ProviderFile, ProviderMod, ProviderScreenshot } from "./types";
 import { getChecksum, getConfig, sleep } from "./utils.js";
 import sharp from "sharp";
 import { headers } from "./index.js";
@@ -7,46 +7,55 @@ import { join } from "node:path";
 import { deletedModDatabase, fullyDeletedModDatabase, modDatabase } from "./databases.js";
 
 const checkArchives = (modId: string, fileId: number, checksum: string, newPath: string) => {
-  const path = join(getConfig().ModsArchiveDirectory, modId + "_" + fileId + ".zip")
+  const path = join(getConfig().ModsArchiveDirectory, modId + "_" + fileId + ".zip");
   if (existsSync(path) && getChecksum(path) === checksum) {
-    renameSync(path, newPath)
+    renameSync(path, newPath);
     const mod = fullyDeletedModDatabase.getEntry(modId);
     if (mod) {
       if (mod.files.length <= 1 && mod.files.includes(fileId)) {
         fullyDeletedModDatabase.removeEntry(modId);
       } else {
-        fullyDeletedModDatabase.setProperty(modId, "files", mod.files.filter(f => f !== fileId))
+        fullyDeletedModDatabase.setProperty(
+          modId,
+          "files",
+          mod.files.filter((f) => f !== fileId),
+        );
       }
     }
     return true;
   }
   return false;
-}
+};
 
 const checkDeletedDatabase = (fileId: number) => {
-  const mod = deletedModDatabase.list().find(mod => mod.files.includes(fileId));
+  const mod = deletedModDatabase.list().find((mod) => mod.files.includes(fileId));
   if (mod) {
-    console.log(mod)
     if (mod.files.length <= 1 && mod.files.includes(fileId)) {
       deletedModDatabase.removeEntry(mod.id);
     } else {
-      deletedModDatabase.setProperty(mod.id, "files", mod.files.filter(f => f !== fileId))
+      deletedModDatabase.setProperty(
+        mod.id,
+        "files",
+        mod.files.filter((f) => f !== fileId),
+      );
     }
   }
-}
+};
 
 const downloadFile = async (url: string, fileId: number, checksum: string) => {
   const path = join(getConfig().ModDirectory, fileId + ".zip");
   if (existsSync(path)) {
-    const checksum2 = getChecksum(path)
+    const checksum2 = getChecksum(path);
     if (checksum2 === checksum) {
-      checkDeletedDatabase(fileId)
+      checkDeletedDatabase(fileId);
       return false;
     }
-    console.error(`File at ${url} is a duplicate from an already existing ${fileId}.zip but does not have the same content!`);
+    console.error(
+      `File at ${url} is a duplicate from an already existing ${fileId}.zip but does not have the same content!`,
+    );
     return false;
-
   }
+
   const file = createWriteStream(path);
   const req = await fetch(url, { headers });
 
@@ -54,15 +63,15 @@ const downloadFile = async (url: string, fileId: number, checksum: string) => {
     console.error(`Got a ${req.status} for ${url}`);
     return false;
   }
-  const blob = await req.blob()
+  const blob = await req.blob();
   const bytes = await blob.bytes();
   if (bytes.length == 0) {
-    console.error(`File at ${url} is empty, @fantomitechno please debug fucking dumbass`)
+    console.error(`File at ${url} is empty, @fantomitechno please debug fucking dumbass`);
     return true;
   }
-  file.write(await blob.bytes())
+  file.write(await blob.bytes());
   return true;
-}
+};
 
 const downloadImage = async (url: string, path: string) => {
   if (existsSync(path)) {
@@ -73,7 +82,7 @@ const downloadImage = async (url: string, path: string) => {
     console.error(`Got a ${req.status} for ${url}`);
     return false;
   }
-  const blob = await req.blob()
+  const blob = await req.blob();
 
   const file = createWriteStream(path);
   try {
@@ -83,23 +92,22 @@ const downloadImage = async (url: string, path: string) => {
     }
     file.write(await image.png().toBuffer());
   } catch (error) {
-    console.error(`Screenshot at ${url} got an issue, @fantomitechno please debug fucking dumbass`)
-    console.error(error)
+    console.error(`Screenshot at ${url} got an issue, @fantomitechno please debug fucking dumbass`);
+    console.error(error);
   }
   return true;
-}
+};
 
-export const createMod = async (mod: GBMod) => {
+export const createMod = async (mod: ProviderMod) => {
   for (const file of mod.files) {
     if (!checkArchives(mod.id, file.id, file.checksum, join(getConfig().ModDirectory, file.id + ".zip"))) {
-      const downloaded = await downloadFile(file.url, file.id, file.checksum)
+      const downloaded = await downloadFile(file.url, file.id, file.checksum);
       if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
     }
   }
 
-
   for (const scs of mod.screenshots) {
-    const downloaded = await downloadImage(scs.url, join(getConfig().ImagesDirectory, scs.id + ".png"))
+    const downloaded = await downloadImage(scs.url, join(getConfig().ImagesDirectory, scs.id + ".png"));
     if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
   }
 
@@ -108,14 +116,14 @@ export const createMod = async (mod: GBMod) => {
     name: mod.name,
     lastModification: mod.lastModification,
     nsfw: mod.nsfw,
-    files: mod.files.map(f => f.id).filter(f => existsSync(join(getConfig().ModDirectory, f + ".zip"))),
-    screenshots: mod.screenshots.map(f => f.id).filter(f => existsSync(join(getConfig().ImagesDirectory, f + ".png")))
-  })
-}
+    files: mod.files.map((f) => f.id).filter((f) => existsSync(join(getConfig().ModDirectory, f + ".zip"))),
+    screenshots: mod.screenshots.map((f) => f.id).filter((f) => existsSync(join(getConfig().ImagesDirectory, f + ".png"))),
+  });
+};
 
 export const deleteMod = (modId: string) => {
   const mod = modDatabase.getEntry(modId);
-  modDatabase.removeEntry(modId)
+  modDatabase.removeEntry(modId);
 
   const deletedMod = deletedModDatabase.getEntry(modId);
 
@@ -124,22 +132,26 @@ export const deleteMod = (modId: string) => {
       id: modId,
       name: mod.name,
       files: mod.files,
-      date: Date.now()
+      date: Date.now(),
     });
   } else {
-    deletedModDatabase.setProperty(modId, "date", Date.now())
+    deletedModDatabase.setProperty(modId, "date", Date.now());
     deletedModDatabase.pushListProperty(modId, "files", ...mod.files);
   }
-}
+};
 
 export const deleteFile = (file: number, knownFiles: { [id: number]: string }, force: boolean = false) => {
   if (existsSync(join(getConfig().ModDirectory, file + ".zip")) && force) {
-    unlinkSync(join(getConfig().ModDirectory, file + ".zip"))
+    unlinkSync(join(getConfig().ModDirectory, file + ".zip"));
   }
 
   const modId = knownFiles[file];
   const mod = modDatabase.getEntry(modId);
-  modDatabase.setProperty(modId, "files", mod.files.filter(f => f !== file));
+  modDatabase.setProperty(
+    modId,
+    "files",
+    mod.files.filter((f) => f !== file),
+  );
   if (!force) {
     const deletedMod = deletedModDatabase.getEntry(modId);
 
@@ -148,41 +160,50 @@ export const deleteFile = (file: number, knownFiles: { [id: number]: string }, f
         id: modId,
         name: mod.name,
         files: [file],
-        date: Date.now()
+        date: Date.now(),
       });
     } else {
-      deletedModDatabase.setProperty(modId, "date", Date.now())
+      deletedModDatabase.setProperty(modId, "date", Date.now());
       deletedModDatabase.pushListProperty(modId, "files", file);
     }
   }
-}
+};
 
-export const createFile = async (fileId: number, discoveredFiles: { [id: number]: GBFile & { modId: string } }) => {
+export const createFile = async (fileId: number, discoveredFiles: { [id: number]: ProviderFile & { modId: string } }) => {
   const file = discoveredFiles[fileId];
 
   if (!checkArchives(file.modId, file.id, file.checksum, join(getConfig().ModDirectory, fileId + ".zip"))) {
-    const downloaded = await downloadFile(file.url, fileId, file.checksum)
+    const downloaded = await downloadFile(file.url, fileId, file.checksum);
     if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
   }
 
   if (existsSync(join(getConfig().ModDirectory, file + ".zip"))) {
     modDatabase.pushListProperty(file.modId, "files", fileId);
   }
-}
+};
 
 export const deleteScs = (screenshot: string, knownScreenshots: { [id: string]: string }) => {
   const modId = knownScreenshots[screenshot];
   const mod = modDatabase.getEntry(modId);
-  modDatabase.setProperty(modId, "screenshots", mod.screenshots.filter(f => f !== screenshot));
-}
+  modDatabase.setProperty(
+    modId,
+    "screenshots",
+    mod.screenshots.filter((f) => f !== screenshot),
+  );
+};
 
-export const createScs = async (screenshot: string, discoveredScreenshots: { [id: string]: GBScreenshot & { modId: string } }) => {
+export const createScs = async (
+  screenshot: string,
+  discoveredScreenshots: {
+    [id: string]: ProviderScreenshot & { modId: string };
+  },
+) => {
   const file = discoveredScreenshots[screenshot];
 
-  const downloaded = await downloadImage(file.url, join(getConfig().ImagesDirectory, screenshot + ".png"))
+  const downloaded = await downloadImage(file.url, join(getConfig().ImagesDirectory, screenshot + ".png"));
   if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
 
   if (existsSync(join(getConfig().ImagesDirectory, screenshot + ".png"))) {
     modDatabase.pushListProperty(file.modId, "screenshots", screenshot);
   }
-}
+};

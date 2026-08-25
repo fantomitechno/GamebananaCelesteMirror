@@ -1,9 +1,9 @@
 import { writeFileSync } from "node:fs";
-import type { BaseMod, DeletedMod, KnownMod } from "./types"
+import type { BaseMod, DeletedMod, LocalMod } from "./types";
 import { getConfig, loadFile } from "./utils.js";
 import { join } from "node:path";
 
-class Database<T extends (BaseMod)> {
+class Database<T extends BaseMod> {
   _database: { [id: string]: T } = {};
   _path: string;
   constructor(file: string) {
@@ -29,9 +29,9 @@ class Database<T extends (BaseMod)> {
   pushListProperty(id: string, property: string, ...value: unknown[]) {
     const entry = this._database[id] as object as { [prop: string]: unknown };
     if (entry) {
-      const prop = entry[property]
+      const prop = entry[property];
       if (prop instanceof Array) {
-        prop.push(...value)
+        prop.push(...value);
       }
     }
   }
@@ -48,7 +48,7 @@ class Database<T extends (BaseMod)> {
   }
 
   save() {
-    writeFileSync(this._path, JSON.stringify(this._database))
+    writeFileSync(this._path, JSON.stringify(this._database));
   }
 
   load() {
@@ -56,14 +56,14 @@ class Database<T extends (BaseMod)> {
   }
 
   lenght() {
-    return Object.keys(this._database).length
+    return Object.keys(this._database).length;
   }
 
   list() {
-    return Object.values(this._database)
+    return Object.values(this._database);
   }
 }
 
-export const modDatabase = new Database<KnownMod>(join(getConfig().ModDirectory, "mods.json"))
-export const deletedModDatabase = new Database<DeletedMod>(join(getConfig().ModDirectory, "deleted-mods.json"))
-export const fullyDeletedModDatabase = new Database<DeletedMod>(join(getConfig().ModsArchiveDirectory, "mods.json"))
+export const modDatabase = new Database<LocalMod>(join(getConfig().ModDirectory, "mods.json"));
+export const deletedModDatabase = new Database<DeletedMod>(join(getConfig().ModDirectory, "deleted-mods.json"));
+export const fullyDeletedModDatabase = new Database<DeletedMod>(join(getConfig().ModsArchiveDirectory, "mods.json"));
