@@ -55,6 +55,10 @@ class Database<T extends BaseMod> {
     this._database = loadFile(this._path, {});
   }
 
+  free() {
+    this._database = {};
+  }
+
   lenght() {
     return Object.keys(this._database).length;
   }

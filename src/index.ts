@@ -3,7 +3,7 @@ import type { Config, ProviderFile, ProviderMod, ProviderScreenshot } from "./ty
 import { createFile, createMod, createScs, deleteFile, deleteMod, deleteScs } from "./files.js";
 import { searchForMapIcons } from "./icons.js";
 import { getConfig } from "./utils.js";
-import { deletedModDatabase, modDatabase } from "./databases.js";
+import { deletedModDatabase, fullyDeletedModDatabase, modDatabase } from "./databases.js";
 import { parseDeleteForArchiving } from "./delete.js";
 import { loadMods } from "./providers/index.js";
 
@@ -181,11 +181,15 @@ const main = async () => {
   }
   modDatabase.save();
   deletedModDatabase.save();
+  fullyDeletedModDatabase.save();
 
   await searchForMapIcons();
 
   console.log("Finished processing");
   bumpRunNumber();
+  modDatabase.free();
+  deletedModDatabase.free();
+  fullyDeletedModDatabase.free();
   if (repeat) setTimeout(main, timeout * 60 * 1000);
 };
 
