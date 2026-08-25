@@ -1,13 +1,40 @@
-import { existsSync, createWriteStream, unlinkSync } from "node:fs";
-import { Config, GBFile, GBMod, GBScreenshot, KnownMod } from "./types"
-import { sleep } from "./utils.js";
+import { existsSync, createWriteStream, unlinkSync, openSync, readSync, closeSync } from "node:fs";
+import { GBFile, GBMod, GBScreenshot } from "./types"
+import { getConfig, sleep } from "./utils.js";
 import sharp from "sharp";
 import { headers } from "./index.js";
 import { join } from "node:path";
+import { createHash } from "node:crypto";
+import { deletedModDatabase, modDatabase } from "./databases.js";
 
-const downloadFile = async (url: string, path: string) => {
+const BUFFER_SIZE = 8192
+
+const getChecksum = (path: string): string | null => {
+  if (!existsSync(path)) return null;
+
+  const fd = openSync(path, 'r')
+  const hash = createHash('md5')
+  const buffer = Buffer.alloc(BUFFER_SIZE)
+
+  try {
+    let bytesRead
+
+    do {
+      bytesRead = readSync(fd, buffer, 0, BUFFER_SIZE, null)
+      hash.update(buffer.subarray(0, bytesRead))
+    } while (bytesRead === BUFFER_SIZE)
+  } finally {
+    closeSync(fd)
+  }
+
+  return hash.digest('hex')
+}
+
+const downloadFile = async (url: string, path: string, checksum: string) => {
   if (existsSync(path)) {
-    return false;
+    const checksum2 = getChecksum(path)
+    if (checksum2 === checksum)
+      return false;
   }
   const file = createWriteStream(path);
   const req = await fetch(url, { headers });
@@ -47,83 +74,74 @@ const downloadImage = async (url: string, path: string) => {
   return true;
 }
 
-export const createMod = async (config: Config, mod: GBMod, knownMods: { [id: string]: KnownMod }) => {
+export const createMod = async (mod: GBMod) => {
   for (const file of mod.files) {
-    const downloaded = await downloadFile(file.url, join(config.ModDirectory, file.id + ".zip"))
+    const downloaded = await downloadFile(file.url, join(getConfig().ModDirectory, file.id + ".zip"), file.checksum)
     if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
   }
 
 
   for (const scs of mod.screenshots) {
-    const downloaded = await downloadImage(scs.url, join(config.ImagesDirectory, scs.id + ".png"))
+    const downloaded = await downloadImage(scs.url, join(getConfig().ImagesDirectory, scs.id + ".png"))
     if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
   }
 
-  knownMods[mod.id] = {
+  modDatabase.pushEntry({
     id: mod.id,
     name: mod.name,
     lastModification: mod.lastModification,
     nsfw: mod.nsfw,
-    files: mod.files.map(f => f.id).filter(f => existsSync(join(config.ModDirectory, f + ".zip"))),
-    screenshots: mod.screenshots.map(f => f.id).filter(f => existsSync(join(config.ImagesDirectory, f + ".png")))
-  }
-
-  return knownMods;
+    files: mod.files.map(f => f.id).filter(f => existsSync(join(getConfig().ModDirectory, f + ".zip"))),
+    screenshots: mod.screenshots.map(f => f.id).filter(f => existsSync(join(getConfig().ImagesDirectory, f + ".png")))
+  })
 }
 
-export const deleteMod = (modId: string, knownMods: { [id: string]: KnownMod }) => {
-  delete knownMods[modId];
-  return knownMods
+export const deleteMod = (modId: string) => {
+  const mod = modDatabase.getEntry(modId);
+  modDatabase.removeEntry(modId)
+
+  deletedModDatabase.pushEntry({
+    id: modId,
+    name: mod.name,
+    files: mod.files,
+    date: Date.now()
+  })
 }
 
-export const deleteFile = (config: Config, file: number, knownMods: { [id: string]: KnownMod }, knownFiles: { [id: number]: string }, force: boolean = false) => {
-  if (existsSync(join(config.ModDirectory, file + ".zip")) && force) {
-    unlinkSync(join(config.ModDirectory, file + ".zip"))
+export const deleteFile = (file: number, knownFiles: { [id: number]: string }, force: boolean = false) => {
+  if (existsSync(join(getConfig().ModDirectory, file + ".zip")) && force) {
+    unlinkSync(join(getConfig().ModDirectory, file + ".zip"))
   }
 
   const modId = knownFiles[file];
-  const mod = knownMods[modId];
-
-  mod.files = mod.files.filter(f => f != file);
-
-  knownMods[modId] = mod;
-
-  return knownMods;
+  const mod = modDatabase.getEntry(modId);
+  modDatabase.setProperty(modId, "files", mod.files.filter(f => f != file));
 }
 
-export const createFile = async (config: Config, fileId: number, knownMods: { [id: string]: KnownMod }, discoveredFiles: { [id: number]: GBFile & { modId: string } }) => {
+export const createFile = async (fileId: number, discoveredFiles: { [id: number]: GBFile & { modId: string } }) => {
   const file = discoveredFiles[fileId];
 
-  const downloaded = await downloadFile(file.url, join(config.ModDirectory, fileId + ".zip"))
+  const downloaded = await downloadFile(file.url, join(getConfig().ModDirectory, fileId + ".zip"), file.checksum)
   if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
 
-  if (existsSync(join(config.ModDirectory, file + ".zip"))) {
-    knownMods[file.modId].files.push(fileId);
+  if (existsSync(join(getConfig().ModDirectory, file + ".zip"))) {
+    modDatabase.pushListProperty(file.modId, "files", fileId);
   }
-
-  return knownMods;
 }
 
-export const deleteScs = (screenshot: string, knownMods: { [id: string]: KnownMod }, knownScreenshots: { [id: string]: string }) => {
+export const deleteScs = (screenshot: string, knownScreenshots: { [id: string]: string }) => {
   const modId = knownScreenshots[screenshot];
-  const mod = knownMods[modId];
-
-  mod.screenshots = mod.screenshots.filter(f => f != screenshot);
-
-  knownMods[modId] = mod;
-
-  return knownMods;
+  const mod = modDatabase.getEntry(modId);
+  modDatabase.setProperty(modId, "screenshots", mod.screenshots.filter(f => f != screenshot));
 }
 
-export const createScs = async (config: Config, screenshot: string, knownMods: { [id: string]: KnownMod }, discoveredScreenshots: { [id: string]: GBScreenshot & { modId: string } }) => {
+export const createScs = async (screenshot: string, discoveredScreenshots: { [id: string]: GBScreenshot & { modId: string } }) => {
   const file = discoveredScreenshots[screenshot];
 
-  const downloaded = await downloadImage(file.url, join(config.ModDirectory, screenshot + ".png"))
+  const downloaded = await downloadImage(file.url, join(getConfig().ModDirectory, screenshot + ".png"))
   if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
 
-  if (existsSync(join(config.ModDirectory, screenshot + ".png"))) {
-    knownMods[file.modId].screenshots.push(screenshot);
+  if (existsSync(join(getConfig().ModDirectory, screenshot + ".png"))) {
+    modDatabase.pushListProperty(file.modId, "screenshots", screenshot);
   }
-
-  return knownMods;
 }

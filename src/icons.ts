@@ -1,37 +1,38 @@
 import AdmZip from "adm-zip";
-import type { Config, KnownMod } from "./types.js";
 import { createXXHash64 } from "hash-wasm";
 import { createWriteStream, existsSync, writeFileSync } from "fs";
 import { deleteFile } from "./files.js";
 import { join } from "path";
+import { modDatabase } from "./databases.js";
+import { getConfig } from "./utils.js";
 
-export const searchIcons = async (config: Config, knownMods: { [id: number]: KnownMod }) => {
+export const searchIcons = async () => {
   const iconsList: string[] = [];
-  for (const mod of Object.values(knownMods)) {
+  for (const mod of modDatabase.list()) {
     for (const file of mod.files) {
       try {
-        const zipFile = new AdmZip(join(config.ModDirectory, file + ".zip"))
+        const zipFile = new AdmZip(join(getConfig().ModDirectory, file + ".zip"))
         if (!mod.nsfw) {
           const fileList = zipFile.getEntries().map(e => e.entryName).filter(e => e.startsWith("Graphics/Atlases/Gui/"));
           const richPresenceIcons = fileList.filter(e => (e.startsWith("Graphics/Atlases/Gui/areas/") || fileList.includes(e.substring(0, e.length - 4) + "_back.png")) && e.endsWith(".png") && !e.endsWith("_back.png") && !e.endsWith("hover.png"))
-          const icons = await copyRichPressenceIcons(config, richPresenceIcons, zipFile)
+          const icons = await copyRichPressenceIcons(richPresenceIcons, zipFile)
           iconsList.push(...icons)
         }
       } catch (error) {
-        console.error(`${config.ModDirectory}/${file}.zip is empty or inexistant`)
+        console.error(`${getConfig().ModDirectory}/${file}.zip is empty or inexistant (dropping it)`)
         const knownFile: { [id: number]: string } = {}
         knownFile[file] = mod.id
-        knownMods = deleteFile(config, file, knownMods, knownFile, true)
+        deleteFile(file, knownFile, true)
       }
     }
   }
 
-  writeFileSync(join(config.RichPresenceDirectory, "/list.json"), JSON.stringify(iconsList))
-  writeFileSync(join(config.ModDirectory, "mods.json"), JSON.stringify(knownMods))
+  writeFileSync(join(getConfig().RichPresenceDirectory, "/list.json"), JSON.stringify(iconsList))
+  modDatabase.save();
 }
 
 
-export const copyRichPressenceIcons = async (config: Config, richPresenceIcons: string[], zipFile: AdmZip) => {
+export const copyRichPressenceIcons = async (richPresenceIcons: string[], zipFile: AdmZip) => {
   const icons: string[] = [];
   for (const icon of richPresenceIcons) {
     const entry = zipFile.getEntry(icon);
@@ -44,7 +45,7 @@ export const copyRichPressenceIcons = async (config: Config, richPresenceIcons: 
 
     const hash = hasher.digest('hex')
 
-    putIcon(data, config.RichPresenceDirectory + "/" + hash + ".png")
+    putIcon(data, getConfig().RichPresenceDirectory + "/" + hash + ".png")
 
     icons.push(hash)
   }

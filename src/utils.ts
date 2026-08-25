@@ -1,4 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
+import { parse } from "smol-toml";
+import { Config } from "./types";
 
 export const sleep = (ms: number) => {
   return new Promise((resolve) => {
@@ -14,4 +16,15 @@ export function loadFile<T extends any>(path: string, default_: any = {}) {
   }
 
   return knownMods
+}
+
+
+const configFile = readFileSync("./config.toml");
+let CONFIG: Config;
+
+export const getConfig = () => {
+  if (!CONFIG) {
+    CONFIG = (parse(configFile.toString()) as object as Config)
+  }
+  return CONFIG
 }

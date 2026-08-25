@@ -5,7 +5,8 @@ export interface GBMod extends GenericMod {
 
 export interface GBFile {
   url: string,
-  id: number
+  id: number,
+  checksum: string
 }
 
 export interface GBScreenshot {
@@ -13,10 +14,13 @@ export interface GBScreenshot {
   id: string
 }
 
-export interface GenericMod {
-  name: string
+export interface BaseMod {
+  name: string,
+  id: string,
+}
+
+export interface GenericMod extends BaseMod {
   lastModification: number
-  id: string
   nsfw: boolean
 }
 
@@ -25,10 +29,16 @@ export interface KnownMod extends GenericMod {
   screenshots: string[]
 }
 
+export interface DeletedMod extends BaseMod {
+  date: number,
+  files: number[]
+}
+
 export interface Config {
   ModDirectory: string;
   ImagesDirectory: string;
   RichPresenceDirectory: string;
+  ModsArchiveDirectory: string;
 
   DownloadArchived: boolean
 }

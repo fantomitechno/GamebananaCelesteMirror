@@ -1,11 +1,12 @@
 import { crawlModsCategory, crawlModsCategoryFull } from "./crawlGB.js";
 import { parse } from "smol-toml";
 import { mkdirSync, readFileSync, existsSync, writeFileSync } from "node:fs";
-import type { Config, GBFile, GBMod, GBScreenshot, KnownMod } from "./types.js";
+import type { Config, DeletedMod, GBFile, GBMod, GBScreenshot, KnownMod } from "./types.js";
 import { createFile, createMod, createScs, deleteFile, deleteMod, deleteScs } from "./files.js";
 import { searchIcons } from "./icons.js";
-import { loadFile } from "./utils.js";
+import { getConfig, loadFile } from "./utils.js";
 import { join } from "node:path";
+import { modDatabase } from "./databases.js";
 
 const args = process.argv
 let timeout = 30;
@@ -41,36 +42,34 @@ if (args.length > 2) {
 }
 
 const ensureFolderExist = (config: Config) => {
-  if (!existsSync(config.ImagesDirectory)) mkdirSync(config.ImagesDirectory);
-  if (!existsSync(config.ModDirectory)) mkdirSync(config.ModDirectory);
-  if (!existsSync(config.RichPresenceDirectory)) mkdirSync(config.RichPresenceDirectory);
+  if (!existsSync(getConfig().ImagesDirectory)) mkdirSync(getConfig().ImagesDirectory);
+  if (!existsSync(getConfig().ModDirectory)) mkdirSync(getConfig().ModDirectory);
+  if (!existsSync(getConfig().RichPresenceDirectory)) mkdirSync(getConfig().RichPresenceDirectory);
 }
 
 const validCategories = ["Mod", "Tool", "Wip"]
+// const validCategories = ["Tool"];
+
+ensureFolderExist(getConfig());
 
 const main = async () => {
   console.log("Starting update");
 
-  const configFile = readFileSync("./config.toml");
-  const config = (parse(configFile.toString()) as object as Config)
-  ensureFolderExist(config);
-  const modsjson = join(config.ModDirectory, "mods.json")
-
   const mods: GBMod[] = []
   if (isFullRun()) {
     for (const category of validCategories) {
-      mods.push(...await crawlModsCategoryFull(config, category));
+      mods.push(...await crawlModsCategoryFull(category));
     }
   } else {
     for (const category of validCategories) {
-      mods.push(...await crawlModsCategory(config, category));
+      mods.push(...await crawlModsCategory(category));
     }
   }
 
   console.log(`Discovered ${mods.length} mods on Gamebanana`);
 
-  let knownMods = loadFile<{ [id: string]: KnownMod }>(modsjson, {});
-  console.log(`${Object.keys(knownMods).length} mods are in the system`);
+  modDatabase.load()
+  console.log(`${modDatabase.lenght()} mods are in the system`);
 
   const discoveredFiles: { [id: number]: GBFile & { modId: string } } = {};
   mods.map(m => {
@@ -101,8 +100,8 @@ const main = async () => {
   const screenshotsToDelete: string[] = [];
 
   for (const mod of mods) {
-    const knownMod = knownMods[mod.id]
-    if (!knownMods[mod.id]) {
+    const knownMod = modDatabase.getEntry(mod.id)
+    if (!knownMod) {
       modsToCreate.push(mod);
       modsToCreateFiles += mod.files.length;
       modsToCreateScreenshots += mod.screenshots.length;
@@ -129,14 +128,14 @@ const main = async () => {
     console.log(`${modsToCreate.length} mods will be created (${modsToCreateFiles} files & ${modsToCreateScreenshots} screenshots)`)
 
     for (const mod of modsToCreate) {
-      knownMods = await createMod(config, mod, knownMods);
+      await createMod(mod);
     }
-    writeFileSync(modsjson, JSON.stringify(knownMods))
+    modDatabase.save();
   }
 
   const knownFiles: { [id: number]: string } = {}
   const knownScreenshots: { [id: string]: string } = {}
-  Object.values(knownMods).map(m => {
+  modDatabase.list().map(m => {
     m.files.forEach(f => {
       knownFiles[f] = m.id;
     })
@@ -148,7 +147,7 @@ const main = async () => {
   if (filesToDelete.length) {
     console.log(`${filesToDelete.length} files will be deleted`)
     for (const file of filesToDelete) {
-      knownMods = deleteFile(config, file, knownMods, knownFiles);
+      deleteFile(file, knownFiles);
     }
   }
 
@@ -156,36 +155,36 @@ const main = async () => {
   if (filesToCreate.length) {
     console.log(`${filesToCreate.length} files will be downloaded`)
     for (const file of filesToCreate) {
-      knownMods = await createFile(config, file, knownMods, discoveredFiles);
+      await createFile(file, discoveredFiles);
     }
   }
 
   if (screenshotsToDelete.length) {
     console.log(`${screenshotsToDelete.length} screenshots will be deleted`)
     for (const screenshot of screenshotsToDelete) {
-      knownMods = deleteScs(screenshot, knownMods, knownScreenshots);
+      deleteScs(screenshot, knownScreenshots);
     }
   }
 
   if (screenshotsToCreate.length) {
     console.log(`${screenshotsToCreate.length} screenshots will be created`)
     for (const screenshot of screenshotsToCreate) {
-      knownMods = await createScs(config, screenshot, knownMods, discoveredScreenshots);
+      await createScs(screenshot, discoveredScreenshots);
     }
   }
 
   if (isFullRun()) {
-    const modsToDelete: string[] = Object.values(knownMods).filter(m => !mods.map(dm => dm.id).includes(m.id)).map(m => m.id);
+    const modsToDelete: string[] = modDatabase.list().filter(m => !mods.map(dm => dm.id).includes(m.id)).map(m => m.id);
     if (modsToDelete.length) {
       console.log(`${modsToDelete.length} mods will be deleted`)
       for (const mod of modsToDelete) {
-        knownMods = deleteMod(mod, knownMods);
+        deleteMod(mod);
       }
     }
   }
-  writeFileSync(modsjson, JSON.stringify(knownMods))
+  modDatabase.save()
 
-  await searchIcons(config, knownMods);
+  await searchIcons();
 
   console.log("Finished processing")
   bumpRunNumber()

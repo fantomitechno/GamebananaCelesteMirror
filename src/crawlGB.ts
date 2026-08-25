@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { headers } from "./index.js";
-import type { Config, GBMod, GBScreenshot } from "./types";
-import { sleep } from "./utils.js";
+import type { GBMod, GBScreenshot } from "./types";
+import { getConfig, sleep } from "./utils.js";
 
 let pageSize = 40;
 
@@ -11,7 +11,7 @@ const pageUrl = (category: string, page: number) => `https://gamebanana.com/apiv
 const infoPageUrl = (category: string, page: number) => `https://gamebanana.com/apiv10/${category}/Index?_nPage=${page}&_nPerpage=${pageSize}&_aFilters[Generic_Game]=${game}&_sSort=Generic_LatestModified`
 const modPageUrl = (category: string, modId: number) => `https://gamebanana.com/apiv8/${category}/${modId}?_csvProperties=_idRow,_sName,_aFiles,_aSubmitter,_sDescription,_sText,_nLikeCount,_nViewCount,_nDownloadCount,_aCategory,_tsDateAdded,_tsDateModified,_tsDateUpdated,_aPreviewMedia,_sProfileUrl,_bIsNsfw&ts=${new Date().getMilliseconds()}`
 
-const parseMod = async (config: Config, category: string, obj: any): Promise<GBMod> => {
+const parseMod = async (category: string, obj: any): Promise<GBMod> => {
   let nsfw = false;
   let screenshots: GBScreenshot[] = obj["_aPreviewMedia"]["_aImages"].slice(0, 2).map((o: any) => {
     const url = o["_sBaseUrl"] + "/" + o["_sFile"]
@@ -34,13 +34,13 @@ const parseMod = async (config: Config, category: string, obj: any): Promise<GBM
     id: category.toLowerCase() + "_" + obj["_idRow"],
     lastModification: obj["_tsDateModified"],
     name: obj["_sName"],
-    files: obj["_aFiles"]?.filter((o: any) => o["_sFile"].endsWith(".zip") && (!o["_bIsArchived"] || !config.DownloadArchived)).map((o: any) => { return { url: o["_sDownloadUrl"], id: o["_idRow"] } }) ?? [],
+    files: obj["_aFiles"]?.filter((o: any) => o["_sFile"].endsWith(".zip") && (!o["_bIsArchived"] || !getConfig().DownloadArchived)).map((o: any) => { return { url: o["_sDownloadUrl"], id: o["_idRow"], checksum: o["_sMd5Checksum"] } }) ?? [],
     screenshots,
     nsfw
   }
 }
 
-const requestFullPage = async (config: Config, category: string, page: number) => {
+const requestFullPage = async (category: string, page: number) => {
   console.log(`Loading page ${page} for ${category}`);
   let request = await fetch(pageUrl(category, page), { headers });
   let tries = 0;
@@ -60,7 +60,7 @@ const requestFullPage = async (config: Config, category: string, page: number) =
       const obj = JSON.parse(text);
       const mods: { [id: string]: GBMod } = {};
       for (const modObj of obj) {
-        const mod = await parseMod(config, category, modObj);
+        const mod = await parseMod(category, modObj);
         mods[mod.id] = mod;
       }
 
@@ -109,7 +109,7 @@ const requestPage = async (category: string, page: number): Promise<{ _tsDateMod
   return null;
 }
 
-const requestMod = async (config: Config, category: string, modId: number) => {
+const requestMod = async (category: string, modId: number) => {
   console.log(`Loading mod ${modId} for ${category}`);
   let request = await fetch(modPageUrl(category, modId), { headers });
   let tries = 0;
@@ -127,7 +127,7 @@ const requestMod = async (config: Config, category: string, modId: number) => {
 
     try {
       const obj = JSON.parse(text);
-      return await parseMod(config, category, obj);
+      return await parseMod(category, obj);
     } catch (error: unknown) {
       if (error instanceof SyntaxError) {
         await sleep(5000 * tries);
@@ -141,17 +141,17 @@ const requestMod = async (config: Config, category: string, modId: number) => {
   return null;
 }
 
-const crawlModsCategoryFull = async (config: Config, category: string) => {
+const crawlModsCategoryFull = async (category: string) => {
   let fullmodList: { [id: string]: GBMod } = {};
   let page = 1;
-  let pageContent = await requestFullPage(config, category, page);
+  let pageContent = await requestFullPage(category, page);
   while (Object.keys(pageContent).length > 0) {
     fullmodList = {
       ...fullmodList,
       ...pageContent
     };
     page++;
-    pageContent = await requestFullPage(config, category, page);
+    pageContent = await requestFullPage(category, page);
   }
 
   let lastModification = Math.max(...Object.values(fullmodList).map(m => m.lastModification));
@@ -170,7 +170,7 @@ const crawlModsCategoryFull = async (config: Config, category: string) => {
   return Object.values(fullmodList);
 }
 
-const crawlModsCategory = async (config: Config, category: string) => {
+const crawlModsCategory = async (category: string) => {
   let lastUpdateObject: { [category: string]: number } = { category: 0 };
   if (existsSync("state.json")) {
     let stateFile = readFileSync("state.json");
@@ -188,7 +188,7 @@ const crawlModsCategory = async (config: Config, category: string) => {
     for (const mod of pageContent) {
       if (mod._tsDateModified > lastUpdateObject[category]) {
 
-        const modInfo = await requestMod(config, category, mod._idRow);
+        const modInfo = await requestMod(category, mod._idRow);
         if (modInfo) {
           lastUpdate = Math.max(mod._tsDateModified, lastUpdate);
           fullmodList[modInfo.id] = modInfo
