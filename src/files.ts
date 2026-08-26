@@ -43,9 +43,10 @@ const checkDeletedDatabase = (fileId: number) => {
 };
 
 const downloadFile = async (url: string, fileId: number, checksum: string) => {
-  const doNotDownloadList = loadFile<string[]>(join(getConfig().ModDirectory, "dndl.json"));
+  const config = getConfig();
+  const doNotDownloadList = loadFile<string[]>(join(config.ModDirectory, "dndl.json"));
   if (doNotDownloadList.includes(url)) return false;
-  const path = join(getConfig().ModDirectory, fileId + ".zip");
+  const path = join(config.ModDirectory, fileId + ".zip");
   if (existsSync(path)) {
     const checksum2 = getChecksum(path);
     if (checksum2 === checksum) {
@@ -66,7 +67,7 @@ const downloadFile = async (url: string, fileId: number, checksum: string) => {
     if (req.status === 404) {
       console.error(`${url} was put in the Do Not Download list`);
       doNotDownloadList.push(url);
-      writeFileSync(join(getConfig().ModDirectory, "dndl.json"), JSON.stringify(doNotDownloadList));
+      writeFileSync(join(config.ModDirectory, "dndl.json"), JSON.stringify(doNotDownloadList));
     }
     return false;
   }
@@ -81,7 +82,8 @@ const downloadFile = async (url: string, fileId: number, checksum: string) => {
 };
 
 const downloadImage = async (url: string, path: string) => {
-  const doNotDownloadList = loadFile<string[]>(join(getConfig().ModDirectory, "dndl.json"));
+  const config = getConfig();
+  const doNotDownloadList = loadFile<string[]>(join(config.ModDirectory, "dndl.json"));
   if (doNotDownloadList.includes(url)) return false;
   if (existsSync(path)) {
     return false;
@@ -92,7 +94,7 @@ const downloadImage = async (url: string, path: string) => {
     if (req.status === 404) {
       console.error(`${url} was put in the Do Not Download list`);
       doNotDownloadList.push(url);
-      writeFileSync(join(getConfig().ModDirectory, "dndl.json"), JSON.stringify(doNotDownloadList));
+      writeFileSync(join(config.ModDirectory, "dndl.json"), JSON.stringify(doNotDownloadList));
     }
     return false;
   }
@@ -113,15 +115,16 @@ const downloadImage = async (url: string, path: string) => {
 };
 
 export const createMod = async (mod: ProviderMod) => {
+  const config = getConfig();
   for (const file of mod.files) {
-    if (!checkArchives(mod.id, file.id, file.checksum, join(getConfig().ModDirectory, file.id + ".zip"))) {
+    if (!checkArchives(mod.id, file.id, file.checksum, join(config.ModDirectory, file.id + ".zip"))) {
       const downloaded = await downloadFile(file.url, file.id, file.checksum);
       if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
     }
   }
 
   for (const scs of mod.screenshots) {
-    const downloaded = await downloadImage(scs.url, join(getConfig().ImagesDirectory, scs.id + ".png"));
+    const downloaded = await downloadImage(scs.url, join(config.ImagesDirectory, scs.id + ".png"));
     if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
   }
 
@@ -130,8 +133,8 @@ export const createMod = async (mod: ProviderMod) => {
     name: mod.name,
     lastModification: mod.lastModification,
     nsfw: mod.nsfw,
-    files: mod.files.map((f) => f.id).filter((f) => existsSync(join(getConfig().ModDirectory, f + ".zip"))),
-    screenshots: mod.screenshots.map((f) => f.id).filter((f) => existsSync(join(getConfig().ImagesDirectory, f + ".png"))),
+    files: mod.files.map((f) => f.id).filter((f) => existsSync(join(config.ModDirectory, f + ".zip"))),
+    screenshots: mod.screenshots.map((f) => f.id).filter((f) => existsSync(join(config.ImagesDirectory, f + ".png"))),
   });
 };
 
