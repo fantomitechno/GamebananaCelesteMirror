@@ -1,6 +1,6 @@
-import { existsSync, createWriteStream, unlinkSync, renameSync } from "node:fs";
+import { existsSync, createWriteStream, unlinkSync, renameSync, writeFileSync } from "node:fs";
 import { ProviderFile, ProviderMod, ProviderScreenshot } from "./types";
-import { getChecksum, getConfig, sleep } from "./utils.js";
+import { getChecksum, getConfig, loadFile, sleep } from "./utils.js";
 import sharp from "sharp";
 import { headers } from "./index.js";
 import { join } from "node:path";
@@ -43,6 +43,8 @@ const checkDeletedDatabase = (fileId: number) => {
 };
 
 const downloadFile = async (url: string, fileId: number, checksum: string) => {
+  const doNotDownloadList = loadFile<string[]>(join(getConfig().ModDirectory, "dndl.json"));
+  if (doNotDownloadList.includes(url)) return false;
   const path = join(getConfig().ModDirectory, fileId + ".zip");
   if (existsSync(path)) {
     const checksum2 = getChecksum(path);
@@ -61,6 +63,11 @@ const downloadFile = async (url: string, fileId: number, checksum: string) => {
 
   if (req.status !== 200) {
     console.error(`Got a ${req.status} for ${url}`);
+    if (req.status === 404) {
+      console.error(`${url} was put in the Do Not Download list`);
+      doNotDownloadList.push(url);
+      writeFileSync(join(getConfig().ModDirectory, "dndl.json"), JSON.stringify(doNotDownloadList));
+    }
     return false;
   }
   const blob = await req.blob();
@@ -74,12 +81,19 @@ const downloadFile = async (url: string, fileId: number, checksum: string) => {
 };
 
 const downloadImage = async (url: string, path: string) => {
+  const doNotDownloadList = loadFile<string[]>(join(getConfig().ModDirectory, "dndl.json"));
+  if (doNotDownloadList.includes(url)) return false;
   if (existsSync(path)) {
     return false;
   }
   const req = await fetch(url, { headers });
   if (req.status !== 200) {
     console.error(`Got a ${req.status} for ${url}`);
+    if (req.status === 404) {
+      console.error(`${url} was put in the Do Not Download list`);
+      doNotDownloadList.push(url);
+      writeFileSync(join(getConfig().ModDirectory, "dndl.json"), JSON.stringify(doNotDownloadList));
+    }
     return false;
   }
   const blob = await req.blob();
