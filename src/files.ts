@@ -79,7 +79,12 @@ const downloadFile = async (url: string, fileId: number, checksum: string) => {
   const file = createWriteStream(path);
   file.write(await blob.bytes());
   file.close();
-  if (getChecksum(path) !== checksum) console.error(`${url} did not provide the correct file (checksum diff)`);
+  const computedChecksum = getChecksum(path);
+  if (computedChecksum !== checksum) {
+    console.error(`${url} did not provide the correct file (checksum diff)`);
+    console.error(`${computedChecksum} (computed)`);
+    console.error(`${checksum} (GB API)`);
+  }
   return true;
 };
 
