@@ -79,12 +79,6 @@ const downloadFile = async (url: string, fileId: number, checksum: string) => {
   const file = createWriteStream(path);
   file.write(await blob.bytes());
   file.close();
-  const computedChecksum = getChecksum(path);
-  if (computedChecksum !== checksum) {
-    console.error(`${url} did not provide the correct file (checksum diff)`);
-    console.error(`${computedChecksum} (computed)`);
-    console.error(`${checksum} (GB API)`);
-  }
   return true;
 };
 
@@ -202,8 +196,15 @@ export const createFile = async (fileId: number, discoveredFiles: { [id: number]
     if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
   }
 
-  if (existsSync(join(getConfig().ModDirectory, file + ".zip"))) {
-    modDatabase.pushListProperty(file.modId, "files", fileId);
+  if (existsSync(join(getConfig().ModDirectory, fileId + ".zip"))) {
+    const computedChecksum = getChecksum(join(getConfig().ModDirectory, fileId + ".zip"));
+    if (computedChecksum !== file.checksum) {
+      console.error(`${file.url} did not provide the correct file (checksum diff)`);
+      console.error(`${computedChecksum} (computed)`);
+      console.error(`${file.checksum} (GB API)`);
+    } else {
+      modDatabase.pushListProperty(file.modId, "files", fileId);
+    }
   }
 };
 
