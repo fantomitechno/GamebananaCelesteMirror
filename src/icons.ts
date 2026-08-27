@@ -8,7 +8,7 @@ import { getConfig, loadFile, getChecksum } from "./utils.js";
 
 export const searchForMapIcons = async () => {
   const iconsList: string[] = [];
-  const alreadyProcessFiles = loadFile<string[]>(join(getConfig().RichPresenceDirectory, "processed.json"));
+  const alreadyProcessFiles = loadFile<string[]>(join(getConfig().RichPresenceDirectory, "processed.json"), []);
   for (const mod of modDatabase.list()) {
     for (const file of mod.files) {
       const checksum = getChecksum(join(getConfig().ModDirectory, file + ".zip"));

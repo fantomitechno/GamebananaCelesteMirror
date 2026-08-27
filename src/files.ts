@@ -44,7 +44,7 @@ const checkDeletedDatabase = (fileId: number) => {
 
 const downloadFile = async (url: string, fileId: number, checksum: string) => {
   const config = getConfig();
-  const doNotDownloadList = loadFile<string[]>(join(config.ModDirectory, "dndl.json"));
+  const doNotDownloadList = loadFile<string[]>(join(config.ModDirectory, "dndl.json"), []);
   if (doNotDownloadList.includes(url)) return false;
   const path = join(config.ModDirectory, fileId + ".zip");
   if (existsSync(path)) {
@@ -83,7 +83,7 @@ const downloadFile = async (url: string, fileId: number, checksum: string) => {
 
 const downloadImage = async (url: string, path: string) => {
   const config = getConfig();
-  const doNotDownloadList = loadFile<string[]>(join(config.ModDirectory, "dndl.json"));
+  const doNotDownloadList = loadFile<string[]>(join(config.ModDirectory, "dndl.json"), []);
   if (doNotDownloadList.includes(url)) return false;
   if (existsSync(path)) {
     return false;
