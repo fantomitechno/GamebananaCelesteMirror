@@ -1,4 +1,4 @@
-import { mkdirSync, existsSync } from "node:fs";
+import { mkdirSync, existsSync, unlinkSync } from "node:fs";
 import type { Config, ProviderFile, ProviderMod, ProviderScreenshot } from "./types.js";
 import { createFile, createMod, createScs, deleteFile, deleteMod, deleteScs } from "./files.js";
 import { searchForMapIcons } from "./icons.js";
@@ -178,6 +178,8 @@ const main = async () => {
     }
 
     parseDeleteForArchiving();
+
+    if (existsSync("checksums.json")) unlinkSync("checksums.json");
   }
   modDatabase.save();
   deletedModDatabase.save();

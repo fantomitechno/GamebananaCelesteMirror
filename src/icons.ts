@@ -1,6 +1,6 @@
 import AdmZip from "adm-zip";
 import { createXXHash64 } from "hash-wasm";
-import { createWriteStream, existsSync, readFileSync, writeFileSync } from "fs";
+import { createWriteStream, existsSync, writeFileSync } from "fs";
 import { deleteFile } from "./files.js";
 import { join } from "path";
 import { modDatabase } from "./databases.js";
@@ -9,9 +9,14 @@ import { getConfig, loadFile, getChecksum } from "./utils.js";
 export const searchForMapIcons = async () => {
   const iconsList: string[] = [];
   const alreadyProcessFiles = loadFile<string[]>(join(getConfig().RichPresenceDirectory, "processed.json"), []);
+  const checkSumDb = loadFile<{ [file: string]: string }>("checksums.json", {});
   for (const mod of modDatabase.list()) {
     for (const file of mod.files) {
-      const checksum = getChecksum(join(getConfig().ModDirectory, file + ".zip"));
+      let checksum: string | null = checkSumDb[join(getConfig().ModDirectory, file + ".zip")];
+      if (!checksum) {
+        checksum = getChecksum(join(getConfig().ModDirectory, file + ".zip"));
+        if (checksum) checkSumDb[join(getConfig().ModDirectory, file + ".zip")] = checksum;
+      }
       if (checksum && alreadyProcessFiles.includes(checksum)) continue;
       try {
         const zipFile = new AdmZip(join(getConfig().ModDirectory, file + ".zip"));
@@ -43,6 +48,7 @@ export const searchForMapIcons = async () => {
 
   writeFileSync(join(getConfig().RichPresenceDirectory, "list.json"), JSON.stringify(iconsList));
   writeFileSync(join(getConfig().RichPresenceDirectory, "processed.json"), JSON.stringify(alreadyProcessFiles));
+  writeFileSync("checksums.json", JSON.stringify(checkSumDb));
   modDatabase.save();
 };
 

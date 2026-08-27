@@ -1,4 +1,4 @@
-import { renameSync } from "node:fs";
+import { existsSync, renameSync } from "node:fs";
 import { getConfig } from "./utils.js";
 import { join } from "node:path";
 import { deletedModDatabase, fullyDeletedModDatabase } from "./databases.js";
@@ -13,10 +13,12 @@ export const parseDeleteForArchiving = () => {
       fullyDeletedModDatabase.pushEntry(mod); // REWRITE
 
       for (const file of mod.files) {
-        renameSync(
-          join(getConfig().ModDirectory, file + ".zip"),
-          join(getConfig().ModsArchiveDirectory, mod.id + "_" + file + ".zip"),
-        );
+        if (existsSync(join(getConfig().ModDirectory, file + ".zip"))) {
+          renameSync(
+            join(getConfig().ModDirectory, file + ".zip"),
+            join(getConfig().ModsArchiveDirectory, mod.id + "_" + file + ".zip"),
+          );
+        }
       }
     }
   }
