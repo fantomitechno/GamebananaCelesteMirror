@@ -6,6 +6,7 @@ images
 rps
 archives
 state.json
+checksums.json
 
 
-test.ts
+test.*
