@@ -59,7 +59,6 @@ const downloadFile = async (url: string, fileId: number, checksum: string) => {
     return false;
   }
 
-  const file = createWriteStream(path);
   const req = await fetch(url, { headers });
 
   if (req.status !== 200) {
@@ -77,7 +76,9 @@ const downloadFile = async (url: string, fileId: number, checksum: string) => {
     console.error(`File at ${url} is empty, @fantomitechno please debug fucking dumbass`);
     return true;
   }
+  const file = createWriteStream(path);
   file.write(await blob.bytes());
+  file.close();
   return true;
 };
 
@@ -100,13 +101,14 @@ const downloadImage = async (url: string, path: string) => {
   }
   const blob = await req.blob();
 
-  const file = createWriteStream(path);
   try {
     let image = sharp(await blob.bytes());
     if (!path.includes("/220-90_")) {
       image = image.resize({ width: 220, height: 220, fit: "inside" });
     }
+    const file = createWriteStream(path);
     file.write(await image.png().toBuffer());
+    file.close();
   } catch (error) {
     console.error(`Screenshot at ${url} got an issue, @fantomitechno please debug fucking dumbass`);
     console.error(error);
