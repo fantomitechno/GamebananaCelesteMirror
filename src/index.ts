@@ -16,7 +16,7 @@ let isFullRun = () => runNumber == 0;
 let bumpRunNumber = () => {
   runNumber++;
   if (runNumber >= 8) {
-    runNumber == 0;
+    runNumber = 0;
   }
 };
 
