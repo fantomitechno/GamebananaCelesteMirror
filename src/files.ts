@@ -54,8 +54,10 @@ const downloadFile = async (url: string, fileId: number, checksum: string) => {
       return false;
     }
     console.error(
-      `File at ${url} is a duplicate from an already existing ${fileId}.zip but does not have the same content!`,
+      `File at ${url} is a duplicate from an already existing ${fileId}.zip but does not have the same content! (checksum diff)`,
     );
+    console.error(`${checksum2} (computed)`);
+    console.error(`${checksum} (GB API)`);
     return false;
   }
 
@@ -198,7 +200,7 @@ export const createFile = async (fileId: number, discoveredFiles: { [id: number]
 
   if (existsSync(join(getConfig().ModDirectory, fileId + ".zip"))) {
     const computedChecksum = getChecksum(join(getConfig().ModDirectory, fileId + ".zip"));
-    if (computedChecksum !== file.checksum) {
+    if (computedChecksum !== file.checksum && file.checksum !== "") {
       console.error(`${file.url} did not provide the correct file (checksum diff)`);
       console.error(`${computedChecksum} (computed)`);
       console.error(`${file.checksum} (GB API)`);
