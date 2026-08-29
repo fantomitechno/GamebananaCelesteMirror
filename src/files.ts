@@ -1,4 +1,4 @@
-import { existsSync, createWriteStream, unlinkSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, createWriteStream, unlinkSync, renameSync, writeFileSync, statSync } from "node:fs";
 import { ProviderFile, ProviderMod, ProviderScreenshot } from "./types";
 import { getChecksum, getConfig, loadFile, sleep } from "./utils.js";
 import sharp from "sharp";
@@ -42,12 +42,23 @@ const checkDeletedDatabase = (fileId: number) => {
   }
 };
 
-const downloadFile = async (url: string, fileId: number, checksum: string) => {
+const downloadFile = async (url: string, fileId: number, size: number) => {
   const config = getConfig();
   const doNotDownloadList = loadFile<string[]>(join(config.ModDirectory, "dndl.json"), []);
   if (doNotDownloadList.includes(url)) return false;
   const path = join(config.ModDirectory, fileId + ".zip");
   if (existsSync(path)) {
+    const stat = statSync(path);
+    if (stat.size === size) {
+      checkDeletedDatabase(fileId);
+      return false;
+    }
+    console.error(
+      `File at ${url} is a duplicate from an already existing ${fileId}.zip but does not have the same content! (size diff)`,
+    );
+    console.error(`${stat.size} (local)`);
+    console.error(`${size} (GB API)`);
+    /*
     const checksum2 = getChecksum(path);
     if (checksum2 === checksum) {
       checkDeletedDatabase(fileId);
@@ -58,6 +69,7 @@ const downloadFile = async (url: string, fileId: number, checksum: string) => {
     );
     console.error(`${checksum2} (computed)`);
     console.error(`${checksum} (GB API)`);
+    */
     return false;
   }
 
@@ -122,7 +134,7 @@ export const createMod = async (mod: ProviderMod) => {
   const config = getConfig();
   for (const file of mod.files) {
     if (!checkArchives(mod.id, file.id, file.checksum, join(config.ModDirectory, file.id + ".zip"))) {
-      const downloaded = await downloadFile(file.url, file.id, file.checksum);
+      const downloaded = await downloadFile(file.url, file.id, file.size);
       if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
     }
   }
@@ -194,17 +206,25 @@ export const createFile = async (fileId: number, discoveredFiles: { [id: number]
   const file = discoveredFiles[fileId];
 
   if (!checkArchives(file.modId, file.id, file.checksum, join(getConfig().ModDirectory, fileId + ".zip"))) {
-    const downloaded = await downloadFile(file.url, fileId, file.checksum);
+    const downloaded = await downloadFile(file.url, fileId, file.size);
     if (downloaded) await sleep(500); // if file already exist on disk (???) to not wait as we did not download it
   }
 
   if (existsSync(join(getConfig().ModDirectory, fileId + ".zip"))) {
-    const computedChecksum = getChecksum(join(getConfig().ModDirectory, fileId + ".zip"));
+    const stat = statSync(join(getConfig().ModDirectory, fileId + ".zip"));
+    if (stat.size !== file.size) {
+      console.error(`${file.url} did not provide the correct file (size diff)`);
+      console.error(`${stat.size} (local)`);
+      console.error(`${file.size} (GB API)`);
+    }
+    /* const computedChecksum = getChecksum(join(getConfig().ModDirectory, fileId + ".zip"));
     if (computedChecksum !== file.checksum && file.checksum !== "") {
       console.error(`${file.url} did not provide the correct file (checksum diff)`);
       console.error(`${computedChecksum} (computed)`);
       console.error(`${file.checksum} (GB API)`);
-    } else {
+    }
+    */
+    else {
       modDatabase.pushListProperty(file.modId, "files", fileId);
     }
   }

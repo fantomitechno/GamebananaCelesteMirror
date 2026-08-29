@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { headers } from "../index.js";
-import type { ProviderMod, ProviderScreenshot } from "../types";
+import type { ProviderFile, ProviderMod, ProviderScreenshot } from "../types";
 import { getConfig, sleep } from "../utils.js";
 
 let pageSize = 40;
@@ -57,7 +57,8 @@ const parseMod = async (category: string, obj: any): Promise<ProviderMod> => {
             url: o["_sDownloadUrl"],
             id: o["_idRow"],
             checksum: o["_sMd5Checksum"],
-          };
+            size: o["_nFilesize"],
+          } as ProviderFile;
         }) ?? [],
     screenshots,
     nsfw,

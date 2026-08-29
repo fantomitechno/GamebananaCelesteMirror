@@ -7,6 +7,7 @@ export interface ProviderFile {
   url: string;
   id: number;
   checksum: string;
+  size: number;
 }
 
 export interface ProviderScreenshot {
