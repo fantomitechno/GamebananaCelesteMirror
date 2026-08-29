@@ -189,7 +189,7 @@ const crawlModsCategoryFull = async (category: string) => {
     lastUpdateObject = JSON.parse(stateFile.toString());
   }
 
-  lastUpdateObject[category] = lastModification;
+  lastUpdateObject[category] = Math.max(lastModification, lastUpdateObject[category]);
   writeFileSync("state.json", JSON.stringify(lastUpdateObject));
   pageSize++;
   if (pageSize > 50) pageSize = 40;
