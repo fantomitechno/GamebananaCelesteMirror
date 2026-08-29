@@ -225,6 +225,7 @@ const crawlModsCategory = async (category: string) => {
         return Object.values(fullmodList);
       }
     }
+    page++;
   }
 
   lastUpdateObject[category] = lastUpdate;
