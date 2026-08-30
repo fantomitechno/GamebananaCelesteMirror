@@ -213,6 +213,11 @@ const crawlModsCategory = async (category: string) => {
     const pageContent = await requestPage(category, page);
     if (!pageContent) break;
 
+    if (!pageContent.length) {
+      console.log("state.json content: ", lastUpdateObject);
+      break;
+    }
+
     for (const mod of pageContent) {
       if (mod._tsDateModified > lastUpdateObject[category]) {
         const modInfo = await requestMod(category, mod._idRow);
